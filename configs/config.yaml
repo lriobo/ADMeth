@@ -1,0 +1,26 @@
+paths:
+  annotations: data/annotations/Anno320K.csv
+  raw: 
+      - data/datasets/Michaud_float16.npy
+      - data/datasets/FraCon_float16.npy
+      - data/datasets/FraCas_float16.npy
+  admodel: models/heavymodelv1
+  msemetrics: data/msemetrics
+  processed: data/processed
+  reports: data/reports
+
+preprocess:
+  impute: true
+  normalize: zscore
+
+train:
+  model: xgboost        
+  n_jobs: 4
+  random_state: 42
+
+evaluate:
+  metrics: [auc, accuracy, f1]
+
+plots:
+  format: png
+  dpi: 150

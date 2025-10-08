@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ADMeth"
+version = "0.1.0"
+description = "Pipeline for methylation model evaluation"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "torch",
+    "matplotlib",
+    "seaborn",
+    "pyyaml",
+    "joblib",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["cli", "steps_evaluate", "steps_preprocess"]
+
+[project.scripts]
+admeth = "cli:main"

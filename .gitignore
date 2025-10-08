@@ -1,0 +1,17 @@
+# Entornos y caches
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+*.pyc
+*.pyo
+*.pyd
+
+# Metadatos de empaquetado
+*.egg-info/
+build/
+dist/
+
+# Carpetas pesadas o generadas por la pipeline
+data/
+models/
+reports/
