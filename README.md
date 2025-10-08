@@ -1,6 +1,6 @@
 # ADMeth
 
-**ADMeth** is a command-line pipeline for methylation model evaluation.
+**ADMeth** is a pipeline for classification of methylation datasets based on Anomaly Detection 
 
 ---
 
