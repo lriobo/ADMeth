@@ -1,9 +1,10 @@
 paths:
   annotations: data/annotations/Anno320K.csv
-  raw: 
-      - data/datasets/Michaud_float16.npy
-      - data/datasets/FraCon_float16.npy
-      - data/datasets/FraCas_float16.npy
+  raw:
+    cases_files:
+      - data/datasets/cases/FraCas_float16.npy
+    controls_files:
+      - data/datasets/controls/FraCon_float16.npy
   admodel: models/heavymodelv1
   msemetrics: data/msemetrics
   processed: data/processed

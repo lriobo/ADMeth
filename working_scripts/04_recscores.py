@@ -45,83 +45,8 @@ def group_columns_by_mean(data, group_size: int = 10, missing_value: float = -1)
     grouped_matrix = pd.concat(grouped_cols, axis=1)
     return grouped_matrix
 
-
-# In[4]:
-
-
 MicMSE = group_columns_by_mean(MicMSE, group_size=10)
 TrainConMSE = group_columns_by_mean(TrainConMSE, group_size=10)
-
-
-# In[6]:
-
-
-keep = (pdMic["Cohort"]=="PHS")
-keep = keep.to_numpy()
-EVMicMSE = MicMSE.iloc[keep,:]
-EVpdMic = pdMic.iloc[keep,:]
-
-keep = (pdMic["Cohort"]!="PHS")
-keep = keep.to_numpy()
-CVMicMSE = MicMSE.iloc[keep,:]
-CVpdMic = pdMic.iloc[keep,:]
-
-keep = (CVpdMic["Status"]==0)
-keep = keep.to_numpy()
-CVMicConMSE = CVMicMSE.iloc[keep,:]
-CVpdMicCon = CVpdMic.iloc[keep,:]
-
-keep = (CVpdMic["Status"]==1)
-keep = keep.to_numpy()
-CVMicCasMSE = CVMicMSE.iloc[keep,:]
-CVpdMicCas = CVpdMic.iloc[keep,:]
-
-keep = (EVpdMic["Status"]==0)
-keep = keep.to_numpy()
-EVMicConMSE = EVMicMSE.iloc[keep,:]
-EVpdMicCon = EVpdMic.iloc[keep,:]
-
-keep = (EVpdMic["Status"]==1)
-keep = keep.to_numpy()
-EVMicCasMSE = EVMicMSE.iloc[keep,:]
-EVpdMicCas = EVpdMic.iloc[keep,:]
-
-keep = (CVpdMicCas["YearsToDiagnosis"]<=5)
-keep = keep.to_numpy()
-CVMic5CasMSE = CVMicCasMSE.iloc[keep,:]
-
-keep = (CVpdMicCas["YearsToDiagnosis"]<=3) 
-keep = keep.to_numpy()
-CVMic3CasMSE = CVMicCasMSE.iloc[keep,:]
-
-keep = (CVpdMicCas["YearsToDiagnosis"]>10)
-keep = keep.to_numpy()
-CVMicM10CasMSE = CVMicCasMSE.iloc[keep,:]
-
-keep = (CVpdMicCas["YearsToDiagnosis"]<=10) & (CVpdMicCas["YearsToDiagnosis"]>5)
-keep = keep.to_numpy()
-CVMic10CasMSE = CVMicCasMSE.iloc[keep,:]
-
-keep = (EVpdMicCas["YearsToDiagnosis"]<=5)
-keep = keep.to_numpy()
-EVMic5CasMSE = EVMicCasMSE.iloc[keep,:]
-
-keep = (EVpdMicCas["YearsToDiagnosis"]<=3) 
-keep = keep.to_numpy()
-EVMic3CasMSE = EVMicCasMSE.iloc[keep,:]
-
-keep = (EVpdMicCas["YearsToDiagnosis"]>10)
-keep = keep.to_numpy()
-EVMicM10CasMSE = EVMicCasMSE.iloc[keep,:]
-
-keep = (EVpdMicCas["YearsToDiagnosis"]<=10) & (EVpdMicCas["YearsToDiagnosis"]>5)
-keep = keep.to_numpy()
-EVMic10CasMSE = EVMicCasMSE.iloc[keep,:]
-
-
-# MSE Analysis
-
-# In[8]:
 
 
 def BackgroundNormalization(ErrorsMatrix):
