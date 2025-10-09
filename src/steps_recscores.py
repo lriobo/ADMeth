@@ -14,7 +14,7 @@ from utils_banner import print_banner
 def run(cfg):
     project = str(cfg.get("run", {}).get("project", "default"))
     print_banner(step="recscores", project=project)
-    print("###############   RECSCORES (Z-SCORE PIPELINE)   ###############")
+    print("###############   04 - REC SCORES   ###############")
     run_cfg = cfg.get("run", {})
     project = str(run_cfg.get("project", "default"))
 
@@ -23,10 +23,10 @@ def run(cfg):
     out_root.mkdir(parents=True, exist_ok=True)
     
     cases_dir         = (mse_root / "cases").resolve()
-    proc_controls_dir = (mse_root / "controls").resolve()     # .npy a PROCESAR (controles)
+    proc_controls_dir = (mse_root / "controls").resolve()     
     norm_controls_dir = Path(cfg["paths"].get("norm_controls_root", proc_controls_dir)).resolve()
 
-    print(f"[Normalization controls from: {norm_controls_dir}")
+    print(f"Normalization controls from: {norm_controls_dir}")
     print(f"Processing cases:   {cases_dir}")
     print(f"Processing controls:    {proc_controls_dir}")
     print(f"Processing outputs:         {out_root}")
@@ -62,7 +62,6 @@ def run(cfg):
         return grouped_matrix
 
     def background_normalization(mat: np.ndarray) -> pd.DataFrame:
-        """Normaliza cada FILA dividiéndola por su mediana (fila a fila)."""
         df = pd.DataFrame(mat.astype(np.float32, copy=False))
         med = df.median(axis=1).replace(0, np.nan)
         df = df.div(med, axis=0)
@@ -79,11 +78,10 @@ def run(cfg):
     proc_control_files = sorted(proc_controls_dir.rglob("*.npy"))
 
     if not norm_control_files:
-        raise RuntimeError(f"No se encontraron .npy para normalizar en: {norm_controls_dir}")
+        raise RuntimeError(f"No .npy file found in: {norm_controls_dir}")
     if not case_files and not proc_control_files:
-        raise RuntimeError(f"No se encontraron .npy para procesar en: {cases_dir} y/o {proc_controls_dir}")
+        raise RuntimeError(f"No .npy file found in: {cases_dir} a/o {proc_controls_dir}")
 
-    print("Preparing RE SCORES...")
     bc_controls_list = []
     for f in norm_control_files:
         mat = np.load(f)  # (n_samples, n_features)
@@ -105,12 +103,12 @@ def run(cfg):
                 dataset = f.stem.replace("_mse_per_sample_per_position", "")
             print(f"[{gname}] processing {dataset}...")
         
-            z = None  # <-- NUEVO: inicializa
+            z = None  
             try:
-                mat = np.load(f).astype(np.float32, copy=False)  # <-- float32 desde el principio
+                mat = np.load(f).astype(np.float32, copy=False)  
                 grouped = group_columns_by_mean(mat, group_size=group_size, missing_value=missing_value)
                 bc = background_normalization(grouped.values)
-                z  = (bc - ctrl_mean) / ctrl_std  # usa ctrl_std ya saneado
+                z  = (bc - ctrl_mean) / (ctrl_std + 1)  
                 z  = z.replace([np.inf, -np.inf], 0.0).fillna(0.0)
             except Exception as e:
                 print(f"[{gname}] ERROR: fail processing {f.name}: {e}")

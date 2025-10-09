@@ -360,7 +360,11 @@ def run(cfg):
     project = str(run_cfg.get("project", "default"))
     
     mlplots = cfg.get("mlplots", {})
-    results_dir = mlplots.get("results_dir")
+    base_dir = Path(cfg["paths"]["mlmodels"])
+    results_dir = base_dir / project  
+    results_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"[plots] saving outputs to: {results_dir}")
     if results_dir is None:
         out_dir = Path(cfg.get("mlmodels", {}).get("out_dir", "data/reports/mlmodels"))
         results_dir = (out_dir / project).as_posix()
