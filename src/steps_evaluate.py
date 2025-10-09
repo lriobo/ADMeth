@@ -10,22 +10,89 @@ import re
 import ast
 import matplotlib.pyplot as plt
 from pathlib import Path
+from utils_banner import print_banner
+
 
 def run(cfg):
+    project = str(cfg.get("run", {}).get("project", "default"))
+    print_banner(step="evaluate", project=project)
     print("############   02-EVALUATION   ############")
     
-    #model_dir = "/home/77462217B/lois/ADMeth/model/heavymodelv1"
+    # --- Run config: nombre de proyecto y selección opcional ---
+    run_cfg = cfg.get("run", {})
+    project = str(run_cfg.get("project", "default"))
+    select = run_cfg.get("select", {})
+    sel_cases = set(select.get("cases", []))
+    sel_controls = set(select.get("controls", []))
+
+    # --- Rutas y datasets de entrada (raw) ---
     model_dir = Path(cfg["paths"]["admodel"])
-    #datasets = ["/home/77462217B/lois/ADMeth/data/datasets/FraCas_float16.npy", ]
-    #datasets = cfg["paths"]["raw"]
-    raw_cfg = cfg["paths"]["raw"]
+        # --- Preferencia de entradas ---
+    # Intentamos leer paths.raw; si no existe, construimos rutas desde datasets_root + run.select
+    raw_cfg = cfg.get("paths", {}).get("raw", {})
+
+    if not raw_cfg:
+        ds_root = Path(cfg["paths"]["datasets_root"]).resolve()
+        cases_files = []
+        controls_files = []
+
+        if sel_cases:
+            for stem in sel_cases:
+                p = ds_root / "cases" / f"{stem}.npy"
+                if p.exists():
+                    cases_files.append(str(p))
+                else:
+                    print(f"[⚠️ Warning] Archivo no encontrado para case: {p}")
+
+        if sel_controls:
+            for stem in sel_controls:
+                p = ds_root / "controls" / f"{stem}.npy"
+                if p.exists():
+                    controls_files.append(str(p))
+                else:
+                    print(f"[⚠️ Warning] Archivo no encontrado para control: {p}")
+
+        raw_cfg = {
+            "cases_files": cases_files,
+            "controls_files": controls_files
+        }
+
     groups = {
         "cases": raw_cfg.get("cases_files", []),
         "controls": raw_cfg.get("controls_files", [])
     }
 
-    #output_base_dir = "/home/77462217B/lois/ADMeth/outcomes/griddatasetv2outcomes/"
-    output_base_dir  = Path(cfg["paths"]["msemetrics"])
+    # Si el usuario no seleccionó nada y tampoco hay rutas, error
+    if not groups["cases"] and not groups["controls"]:
+        raise RuntimeError("No se encontraron datasets para procesar. Revisa run.select o paths.datasets_root.")
+
+
+    # Para evaluate (raw .npy tipo FraCas_float16.npy) el stem es simple:
+    def _stem(p): 
+        return Path(p).stem
+
+    # Filtrado opcional por selección
+    if sel_cases:
+        groups["cases"] = [p for p in groups["cases"] if _stem(p) in sel_cases]
+    if sel_controls:
+        groups["controls"] = [p for p in groups["controls"] if _stem(p) in sel_controls]
+
+    # --- Carpeta de salida: msemetrics/<project> ---
+    output_base_dir = Path(cfg["paths"]["msemetrics"]) / project
+    output_base_dir.mkdir(parents=True, exist_ok=True)
+
+    # Info útil
+    print(f"[evaluate] project       = {project}")
+    print(f"[evaluate] model_dir     = {model_dir}")
+    print(f"[evaluate] output_base   = {output_base_dir}")
+    print(f"[evaluate] #cases        = {len(groups['cases'])}")
+    print(f"[evaluate] #controls     = {len(groups['controls'])}")
+
+    # Seguridad: no continuar si no hay nada que procesar
+    if not groups["cases"] and not groups["controls"]:
+        raise RuntimeError("[evaluate] No hay datasets seleccionados tras el filtrado. Revisa run.select en config.")
+
+    # Dispositivo
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     info_path = os.path.join(model_dir, "model_info.txt")

@@ -1,20 +1,28 @@
+import os, warnings
+from pathlib import Path
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import StratifiedKFold
+from sklearn.feature_selection import f_classif
+from sklearn.metrics import roc_auc_score
+from sklearn.ensemble import (
+    RandomForestClassifier,
+    GradientBoostingClassifier,
+    HistGradientBoostingClassifier,
+    ExtraTreesClassifier,
+)
+from sklearn.base import clone
+from joblib import Parallel, delayed
+from utils_banner import print_banner
+
+
 def run(cfg):
+    project = str(cfg.get("run", {}).get("project", "default"))
+    print_banner(step="mlmodels", project=project)
     print("############   03-MLMODELS (CV + bootstrap)   ############")
-    import os, warnings
-    from pathlib import Path
-    import numpy as np
-    import pandas as pd
-    from sklearn.model_selection import StratifiedKFold
-    from sklearn.feature_selection import f_classif
-    from sklearn.metrics import roc_auc_score
-    from sklearn.ensemble import (
-        RandomForestClassifier,
-        GradientBoostingClassifier,
-        HistGradientBoostingClassifier,
-        ExtraTreesClassifier,
-    )
-    from sklearn.base import clone
-    from joblib import Parallel, delayed
+    run_cfg = cfg.get("run", {})
+    project = str(run_cfg.get("project", "default"))
+
 
     # ========== 0) Ajustes de entorno / warnings ==========
     warnings.filterwarnings("ignore", category=UserWarning)
@@ -31,9 +39,9 @@ def run(cfg):
     paths = cfg["paths"]
 
     # Carpeta base donde están los resultados de recscores
-    recscores_dir = Path(paths["recscores"]).resolve()
-    cases_dir = recscores_dir / "cases"
-    controls_dir = recscores_dir / "controls"
+    recscores_dir = (Path(cfg["paths"]["recscores"]).resolve() / project)
+    cases_dir     = recscores_dir / "cases"
+    controls_dir  = recscores_dir / "controls"
 
     if not cases_dir.exists() or not controls_dir.exists():
         raise FileNotFoundError(f"Controls and cases folders not found in: {recscores_dir}")
@@ -51,7 +59,7 @@ def run(cfg):
     print(f"[mlmodels] Controls files found: {len(controls_files)}")
 
     # Directorio de salida
-    out_dir = Path(mlcfg.get("out_dir", "data/reports/mlmodels")).resolve()
+    out_dir = (Path(cfg.get("mlmodels", {}).get("out_dir", "data/reports/mlmodels")).resolve() / project)
     out_dir.mkdir(parents=True, exist_ok=True)
     micro_path = out_dir / "AUC.csv"
     bootstrap_path = out_dir / "AUC_bootstrap.csv"

@@ -33,7 +33,7 @@ Our pipeline requires 2 input datasets: cases and controls, which should be plac
 
 **4- REC scores**: Obtains a normalized REC score for measuring anomalies.
 
-**5- ML models**: Trains multiple binary classifiers for the selected task (can be also done with raw beta-values for a baseline comparison).
+**5- ML models**: Trains multiple binary classifiers for the selected task with these REC scores (can be also done with raw beta-values for a baseline comparison).
 
 **6- Plots**: Plot classification results in terms of AUC across different ML models and configurations.
 

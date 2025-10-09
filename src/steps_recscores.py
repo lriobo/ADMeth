@@ -8,20 +8,22 @@ import pandas as pd
 import numpy as np
 from scipy.spatial import cKDTree
 from pathlib import Path
+from utils_banner import print_banner
+
 
 def run(cfg):
+    project = str(cfg.get("run", {}).get("project", "default"))
+    print_banner(step="recscores", project=project)
     print("###############   RECSCORES (Z-SCORE PIPELINE)   ###############")
+    run_cfg = cfg.get("run", {})
+    project = str(run_cfg.get("project", "default"))
 
-    from pathlib import Path
-    import numpy as np
-    import pandas as pd
-
-    mse_root = Path(cfg["paths"]["msemetrics"]).resolve()      # data/msemetrics
-    out_root = Path(cfg["paths"]["recscores"]).resolve()       # data/recscores
+    mse_root = (Path(cfg["paths"]["msemetrics"]).resolve() / project)
+    out_root = (Path(cfg["paths"]["recscores"]).resolve() / project)
     out_root.mkdir(parents=True, exist_ok=True)
-
-    cases_dir         = (mse_root / "cases").resolve()         # .npy a PROCESAR (casos)
-    proc_controls_dir = (mse_root / "controls").resolve()      # .npy a PROCESAR (controles)
+    
+    cases_dir         = (mse_root / "cases").resolve()
+    proc_controls_dir = (mse_root / "controls").resolve()     # .npy a PROCESAR (controles)
     norm_controls_dir = Path(cfg["paths"].get("norm_controls_root", proc_controls_dir)).resolve()
 
     print(f"[Normalization controls from: {norm_controls_dir}")

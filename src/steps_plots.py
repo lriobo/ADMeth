@@ -9,12 +9,14 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.ticker import MultipleLocator, AutoMinorLocator
 from pathlib import Path
+from utils_banner import print_banner
+
 
 # ---- fixed display ranges ----
-HEATMAP_VMIN = 0.3
-HEATMAP_VMAX = 0.8
-LINE_YLIM   = (0.2, 0.8)
-BOX_YLIM    = (0.3, 0.8)
+HEATMAP_VMIN = 0
+HEATMAP_VMAX = 1
+LINE_YLIM   = (0, 1)
+BOX_YLIM    = (0, 1)
 Y_TICK_STEP_HEATMAP = 30   # k ticks every 30
 
 # ---- simple logger for report ----
@@ -352,12 +354,16 @@ def visualize_cv_results(results_dir: str, save_outputs: bool = True, make_html_
     logger.log("Done.")
 
 def run(cfg):
+    project = str(cfg.get("run", {}).get("project", "default"))
+    print_banner(step="plots", project=project)
+    run_cfg = cfg.get("run", {})
+    project = str(run_cfg.get("project", "default"))
+    
     mlplots = cfg.get("mlplots", {})
     results_dir = mlplots.get("results_dir")
-
     if results_dir is None:
-        # 1) intenta la salida por defecto de mlmodels
-        out_dir = Path(cfg.get("mlmodels", {}).get("out_dir", "")).as_posix()
+        out_dir = Path(cfg.get("mlmodels", {}).get("out_dir", "data/reports/mlmodels"))
+        results_dir = (out_dir / project).as_posix()
         if out_dir:
             results_dir = out_dir
         else:
