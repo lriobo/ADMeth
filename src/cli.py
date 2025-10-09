@@ -1,13 +1,18 @@
-import argparse, yaml
+import argparse
 import steps_preprocess as sp
 import steps_evaluate as se
+import steps_recscores as sr   
 
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("cmd", choices=["preprocess","evaluate","all"])
-    p.add_argument("--config", required=True)
-    args = p.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", required=True)
+    parser.add_argument(
+        "cmd",
+        choices=["preprocess", "evaluate", "recscores", "all"],  
+    )
+    args = parser.parse_args()
 
+    import yaml
     with open(args.config, "r") as f:
         cfg = yaml.safe_load(f)
 
@@ -15,9 +20,9 @@ def main():
         sp.run(cfg)
     elif args.cmd == "evaluate":
         se.run(cfg)
-    else:  # all
+    elif args.cmd == "recscores":          
+        sr.run(cfg)
+    elif args.cmd == "all":
         sp.run(cfg)
         se.run(cfg)
-
-if __name__ == "__main__":
-    main()
+        sr.run(cfg)                       
