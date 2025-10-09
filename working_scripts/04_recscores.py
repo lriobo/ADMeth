@@ -17,8 +17,6 @@ from scipy.spatial import cKDTree
 
 TrainConMSE = np.load("/home/77462217B/lois/ADMeth/outcomes/ValidateDataset1K_float16/ValidateDataset1K_float16_mse_per_sample_per_position.npy")
 MicMSE = np.load("/home/77462217B/lois/ADMeth/outcomes/Michaud_float16/Michaud_float16_mse_per_sample_per_position.npy")
-pdMic=pd.read_csv("/mnt/hydra/ubs/shared/users/Lois/DatasetsControles/OnlyMichaud/pdMichaud.txt", sep=",")
-
 
 # In[3]:
 
