@@ -1,6 +1,6 @@
 # ADMeth
 
-**ADMeth** is a pipeline for classification of methylation data coming from whole-blood samples based on an AI-driven anomaly detection pipeline.
+**ADMeth** is a pipeline for classification of Illumina methylation arrays datasets (450k or EPIC) coming from whole-blood samples based on an AI-driven anomaly detection pipeline. Our workflow automatically extract a feature for each one of the 320,000 selected probes based on its anomaly levels and performs a binary classification task. Graphs, figures and functional and statistical analysis are also included. 
 
 ---
 
@@ -16,6 +16,11 @@ Create and activate a virtual environment:
 Install dependencies and ADMeth in editable mode:
 
     pip install -e .
+
+---
+## 📋 Input data structure
+
+Our pipeline requires 2 input datasets: cases and controls, which should be placed in 2 different folders. These datasets should contain Beta-values and can be in .npy, .csv or .pd format. The only requirement is that they should include a "CpG" column with annotated probes.
 
 ---
 
