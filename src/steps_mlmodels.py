@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
 def run(cfg):
     print("############   03-MLMODELS (CV + bootstrap)   ############")
     import os, warnings
@@ -31,19 +28,34 @@ def run(cfg):
 
     # ========== 1) Leer rutas y parámetros desde config ==========
     mlcfg = cfg.get("mlmodels", {})
+    paths = cfg["paths"]
 
-    cases_npy = Path(mlcfg["cases_npy"]).resolve()
-    controls_npy = Path(mlcfg["controls_npy"]).resolve()
-    if not cases_npy.exists():
-        raise FileNotFoundError(f"No existe cases_npy: {cases_npy}")
-    if not controls_npy.exists():
-        raise FileNotFoundError(f"No existe controls_npy: {controls_npy}")
+    # Carpeta base donde están los resultados de recscores
+    recscores_dir = Path(paths["recscores"]).resolve()
+    cases_dir = recscores_dir / "cases"
+    controls_dir = recscores_dir / "controls"
 
+    if not cases_dir.exists() or not controls_dir.exists():
+        raise FileNotFoundError(f"Controls and cases folders not found in: {recscores_dir}")
+
+    # Buscar recursivamente los archivos .npy
+    cases_files = sorted(cases_dir.rglob("*.npy"))
+    controls_files = sorted(controls_dir.rglob("*.npy"))
+
+    if not cases_files:
+        raise RuntimeError(f"No .npy files found in: {cases_dir}")
+    if not controls_files:
+        raise RuntimeError(f"No .npy files found in: {controls_dir}")
+
+    print(f"[mlmodels] Cases files found: {len(cases_files)}")
+    print(f"[mlmodels] Controls files found: {len(controls_files)}")
+
+    # Directorio de salida
     out_dir = Path(mlcfg.get("out_dir", "data/reports/mlmodels")).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
-    micro_path = out_dir / "MicCas.csv"
-    bootstrap_path = out_dir / "MicCas_bootstrap.csv"
-    top_features_path = out_dir / "MicCas_top20_features.csv"
+    micro_path = out_dir / "AUC.csv"
+    bootstrap_path = out_dir / "AUC_bootstrap.csv"
+    top_features_path = out_dir / "FClassif_top20_features.csv"
 
     # Parámetros
     n_splits = int(mlcfg.get("n_splits", 5))
@@ -55,24 +67,26 @@ def run(cfg):
     n_jobs = int(mlcfg.get("n_jobs", 4))
     k_grid = list(range(1, max_features + 1, 1))
 
-    # ========== 2) Carga NPY (recscores) y limpieza básica ==========
-    # Cada NPY: matriz (n_muestras, n_features_agrupadas)
-    Cases_arr = np.load(cases_npy).astype(np.float32, copy=False)
-    Controls_arr = np.load(controls_npy).astype(np.float32, copy=False)
+    # ========== 2) Cargar y concatenar todos los .npy ==========
+    def load_and_concat(npy_list):
+        arrays = []
+        for f in npy_list:
+            arr = np.load(f).astype(np.float32, copy=False)
+            if arr.ndim != 2:
+                raise ValueError(f"File {f} is not a 2D matrix.")
+            arrays.append(arr)
+        return np.vstack(arrays)
 
-    if Cases_arr.ndim != 2 or Controls_arr.ndim != 2:
-        raise ValueError("Los .npy deben ser matrices 2D (n_samples, n_features).")
+    print("[mlmodels] Cargando casos y controles...")
+    Cases_arr = load_and_concat(cases_files)
+    Controls_arr = load_and_concat(controls_files)
 
     if Cases_arr.shape[1] != Controls_arr.shape[1]:
-        raise ValueError(
-            f"Número de features distinto entre casos ({Cases_arr.shape[1]}) y controles ({Controls_arr.shape[1]})."
-        )
+        raise ValueError(f"Number of features in cases ({Cases_arr.shape[1]}) and controls ({Controls_arr.shape[1]}) is not the same.")
 
-    # Nombres de features genéricos (no hay cabeceras en NPY)
     n_features = Cases_arr.shape[1]
     shared_cols = np.array([f"f{i}" for i in range(n_features)], dtype=object)
 
-    # dataset combinado
     X = np.vstack([Cases_arr, Controls_arr]).astype(np.float32, copy=False)
     y = np.hstack([
         np.ones(Cases_arr.shape[0], dtype=np.int8),
@@ -134,12 +148,10 @@ def run(cfg):
     folds_data = []
     rng = np.random.default_rng(seed=random_state)
 
-    # preparar archivos (reset)
     for p in [micro_path, bootstrap_path, top_features_path]:
         if Path(p).exists():
             Path(p).unlink()
 
-    # header top-20
     pd.DataFrame(columns=["fold", "rank", "feature_name", "feature_index"]).to_csv(
         top_features_path, index=False
     )
@@ -147,7 +159,6 @@ def run(cfg):
     for fold, (tr, te) in enumerate(skf.split(X, y), start=1):
         Xtr, Xte = X[tr], X[te]
         ytr, yte = y[tr], y[te]
-
         feature_names = np.array(shared_cols, dtype=object)
 
         if apply_feature_filter:
@@ -160,14 +171,13 @@ def run(cfg):
         F = np.nan_to_num(F, nan=-np.inf)
         ranked_idx = np.argsort(F)[::-1]
 
-        # guardar top-20 del fold
         top20_idx = ranked_idx[:20]
         top20_names = feature_names[top20_idx]
-        tf_rows = []
-        for rnk, (fname, findex) in enumerate(zip(top20_names, top20_idx), start=1):
-            tf_rows.append({"fold": fold, "rank": rnk, "feature_name": str(fname), "feature_index": int(findex)})
+        tf_rows = [
+            {"fold": fold, "rank": rnk, "feature_name": str(fname), "feature_index": int(findex)}
+            for rnk, (fname, findex) in enumerate(zip(top20_names, top20_idx), start=1)
+        ]
         pd.DataFrame(tf_rows).to_csv(top_features_path, mode="a", header=False, index=False)
-
         folds_data.append((fold, Xtr, ytr, Xte, yte, ranked_idx))
 
     # ========== 7) Bootstrap helper ==========
@@ -180,16 +190,14 @@ def run(cfg):
         idx = rng.integers(0, len(values), size=(n_resamples, len(values)))
         samples = values[idx].mean(axis=1)
         mean_boot = samples.mean()
-        lo = np.quantile(samples, alpha/2)
-        hi = np.quantile(samples, 1 - alpha/2)
+        lo = np.quantile(samples, alpha / 2)
+        hi = np.quantile(samples, 1 - alpha / 2)
         return float(mean_boot), float(lo), float(hi)
-
+    print(f"[mlmodels] Training...")
     # ========== 8) Bucle principal sobre k ==========
     all_models = list(base_classifiers.keys())
     cols_order = ["k"] + all_models
     header_written = False
-
-    # header bootstrap
     pd.DataFrame(columns=["k", "model", "mean_auc_boot", "ci95_low", "ci95_high"]).to_csv(
         bootstrap_path, index=False
     )
@@ -224,11 +232,6 @@ def run(cfg):
             bs_rows.append({"k": int(k), "model": m, "mean_auc_boot": mean_boot, "ci95_low": lo, "ci95_high": hi})
         pd.DataFrame(bs_rows).to_csv(bootstrap_path, mode="a", header=False, index=False)
 
-    print(f"All done! Incremental per-k results: {micro_path}")
-    print(f"Bootstrap summaries: {bootstrap_path}")
-    print(f"Top-20 features per fold: {top_features_path}")
-
-
-
-
-
+    print(f"✅ [mlmodels] Results per-k: {micro_path}")
+    print(f"✅ [mlmodels] Bootstrap summaries: {bootstrap_path}")
+    print(f"✅ [mlmodels] Top-20 features per fold: {top_features_path}")

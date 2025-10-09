@@ -10,7 +10,17 @@ paths:
 recscores:
   group_size: 1
   missing_value: -1
-
+  
+mlmodels:
+  out_dir: data/reports/mlmodels
+  n_splits: 5
+  random_state: 42
+  apply_feature_filter: false
+  feature_filter_threshold: 0.01
+  max_features: 500
+  n_bootstrap: 1000
+  n_jobs: 8
+  
 train:
   model: xgboost        
   n_jobs: 4

@@ -20,7 +20,7 @@ dependencies = [
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-py-modules = ["cli", "steps_evaluate", "steps_preprocess"]
+py-modules = ["cli", "steps_evaluate", "steps_preprocess", "steps_recscores", "steps_mlmodels", "steps_plots"]
 
 [project.scripts]
 admeth = "cli:main"
