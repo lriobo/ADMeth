@@ -64,13 +64,13 @@ def run(cfg):
     def background_normalization(mat: np.ndarray) -> pd.DataFrame:
         df = pd.DataFrame(mat.astype(np.float32, copy=False))
         med = df.median(axis=1).replace(0, np.nan)
-        df = df.div(med, axis=0)
+        df = (df.sub(med, axis=0)).div(med, axis=0)
         df = df.replace([np.inf, -np.inf], np.nan).fillna(0.0)
         return df
 
 
     def score_region(bc_errors: pd.DataFrame, ctrl_mean: pd.Series, ctrl_std: pd.Series) -> pd.DataFrame:
-        z = (bc_errors - ctrl_mean) / ctrl_std.replace(0, np.nan)
+        z = (bc_errors - ctrl_mean) / (80+ctrl_std.replace(0, np.nan))
         return z.fillna(0.0)
 
     norm_control_files = sorted(norm_controls_dir.rglob("*.npy"))
@@ -108,7 +108,7 @@ def run(cfg):
                 mat = np.load(f).astype(np.float32, copy=False)  
                 grouped = group_columns_by_mean(mat, group_size=group_size, missing_value=missing_value)
                 bc = background_normalization(grouped.values)
-                z  = (bc - ctrl_mean) / (ctrl_std + 1)  
+                z  = (bc - ctrl_mean) / (ctrl_std)  
                 z  = z.replace([np.inf, -np.inf], 0.0).fillna(0.0)
             except Exception as e:
                 print(f"[{gname}] ERROR: fail processing {f.name}: {e}")
