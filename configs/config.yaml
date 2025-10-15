@@ -1,7 +1,7 @@
 run:
-  project: Michaud_v1_3cases
+  project: Michaud_v1_5cases
   select:
-    cases:    ["Mic3Cas_float16"]
+    cases:    ["Mic5Cas_float16"]
     controls: ["MicCon_float16"]
 
 paths:
@@ -24,7 +24,7 @@ mlmodels:
   random_state: 42
   apply_feature_filter: false
   feature_filter_threshold: 0.01
-  max_features: 100
+  max_features: 500
   n_bootstrap: 1000
   n_jobs: 8
   
