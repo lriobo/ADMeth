@@ -16,6 +16,9 @@ dependencies = [
     "seaborn",
     "pyyaml",
     "joblib",
+    "statsmodels",
+    "gseapy",
+    "networkx"
 ]
 
 [tool.setuptools]

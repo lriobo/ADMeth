@@ -1,7 +1,7 @@
 run:
-  project: Michaud_v1_5cases
+  project: Michaud_v1_3cases
   select:
-    cases:    ["Mic5Cas_float16"]
+    cases:    ["Mic3Cas_float16"]
     controls: ["MicCon_float16"]
 
 paths:
@@ -27,4 +27,9 @@ mlmodels:
   max_features: 500
   n_bootstrap: 1000
   n_jobs: 8
+
+functional:
+  term: "Pancreatic cancer"   
+  top_n_cpg: 100              
+
   
