@@ -1,5 +1,5 @@
 run:
-  project: Michaud_v1_3cases
+  project: Michaud_v1_3casesTry
   select:
     cases:    ["Mic3Cas_float16"]
     controls: ["MicCon_float16"]
@@ -19,14 +19,18 @@ recscores:
   missing_value: -1
   
 mlmodels:
+  beta_values: true
   out_dir: data/reports/mlmodels
   n_splits: 5
   random_state: 42
   apply_feature_filter: false
   feature_filter_threshold: 0.01
-  max_features: 500
+  max_features: 5
   n_bootstrap: 1000
   n_jobs: 8
+  
+plots:
+  mlmodels_modes: ["rec", "beta"]   
 
 functional:
   term: "Pancreatic cancer"   

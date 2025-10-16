@@ -1,6 +1,9 @@
 # src/steps_plots.py
 #!/usr/bin/env python
 # coding: utf-8
+# src/steps_plots.py
+#!/usr/bin/env python
+# coding: utf-8
 
 import os, glob, base64
 import numpy as np
@@ -31,11 +34,12 @@ def _derive_header_and_prefix(results_dir: str):
     low  = base.lower()
     header = None
 
-    # BetasAll -> "All Cases vs Controls"
-    if low.startswith("betas"):
+    # Encabezado según carpeta
+    if low.startswith("betas") or low == "beta":
         header = "Betas: Cases vs Controls"
-    elif low.startswith("rec"):
+    elif low.startswith("recscores") or low.startswith("rec") or low == "rec":
         header = "REC: Cases vs Controls"
+
     if header is None:
         header = base
 
@@ -353,27 +357,55 @@ def visualize_cv_results(results_dir: str, save_outputs: bool = True, make_html_
     logger.log(f"Saved: {report_path}")
     logger.log("Done.")
 
+
 def run(cfg):
     project = str(cfg.get("run", {}).get("project", "default"))
     print_banner(step="plots", project=project)
-    run_cfg = cfg.get("run", {})
-    project = str(run_cfg.get("project", "default"))
-    
-    mlplots = cfg.get("mlplots", {})
-    base_dir = Path(cfg["paths"]["mlmodels"])
-    results_dir = base_dir / project  
-    results_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"[plots] saving outputs to: {results_dir}")
-    if results_dir is None:
-        out_dir = Path(cfg.get("mlmodels", {}).get("out_dir", "data/reports/mlmodels"))
-        results_dir = (out_dir / project).as_posix()
-        if out_dir:
-            results_dir = out_dir
+    # raíz de resultados ML por proyecto
+    ml_root = (Path(cfg.get("mlmodels", {}).get("out_dir", "data/reports/mlmodels")).resolve() / project)
+
+    # modos a considerar:
+    #  - si vienen en config (plots.mlmodels_modes), normalizamos alias a {'recscores','betas'}
+    #  - si no, autodetectamos 'recscores' y/o 'betas'
+    cfg_modes = cfg.get("plots", {}).get("mlmodels_modes", None)
+
+    def _norm_mode_name(s: str) -> str:
+        s = str(s).strip().lower()
+        if s in {"rec", "recs", "recscores", "rec_scores"}:
+            return "recscores"
+        if s in {"beta", "betas"}:
+            return "betas"
+        return s
+
+    if cfg_modes:
+        modes = [_norm_mode_name(m) for m in cfg_modes]
+    else:
+        modes = []
+        if (ml_root / "recscores").exists(): modes.append("recscores")
+        if (ml_root / "betas").exists():     modes.append("betas")
+        if not modes:
+            modes = [""]  # compat: raíz
+
+    print(f"[plots] project={project}")
+    print(f"[plots] modes to plot: {modes or ['(root)']}")
+
+    # Generar plots para cada modo
+    for mode in modes:
+        if mode == "":
+            results_dir = str(ml_root)
+            tag = "mlmodels"
         else:
-            # 2) fallback: data/reports/mlmodels bajo paths.reports
-            reports_root = Path(cfg.get("paths", {}).get("reports", "data/reports"))
-            results_dir = (reports_root / "mlmodels").as_posix()
+            results_dir = str(ml_root / mode)
+            tag = f"mlmodels_{mode}"
 
-    print(f"[plots] results_dir = {results_dir}")
-    visualize_cv_results(results_dir)
+        if not Path(results_dir).exists():
+            print(f"[plots] skip (not found): {results_dir}")
+            continue
+
+        print(f"[plots] visualizing: {results_dir}")
+        try:
+            visualize_cv_results(results_dir)
+        except Exception as e:
+            print(f"[plots] ERROR in {tag}: {e}")
+

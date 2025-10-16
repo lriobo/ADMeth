@@ -25,14 +25,17 @@ def _norm_stem(p: Path) -> str:
             s = s[: -len(suf)]
     return s
 
-def _load_and_concat(npy_list):
+def _load_and_concat(npy_list, auto_orient: bool = True):
     arrays = []
     for f in npy_list:
         arr = np.load(f).astype(np.float32, copy=False)
         if arr.ndim != 2:
-            raise ValueError(f"File {f} is not a 2D matrix.")
+            raise ValueError(f"File {f} is not a 2D matrix. Got shape {arr.shape}")
+        if auto_orient and arr.shape[1] < arr.shape[0]:
+            arr = arr.T
         arrays.append(arr)
     return np.vstack(arrays)
+
 
 def _apply_feature_threshold_filter(Xtr, ytr, thr=0.10):
     cases = Xtr[ytr == 1]
@@ -281,3 +284,4 @@ def run(cfg):
         betas_cases_dir = ds_root / "cases"
         betas_ctrls_dir = ds_root / "controls"
         _run_one_mode("betas", betas_cases_dir, betas_ctrls_dir, cfg, rng)
+

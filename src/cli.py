@@ -38,7 +38,7 @@ def main():
     elif args.cmd == "summary":
         ssum.run(cfg)
     elif args.cmd == "all":
-        sp.run(cfg)
+#        sp.run(cfg)
         se.run(cfg)
         sr.run(cfg)
         sm.run(cfg)

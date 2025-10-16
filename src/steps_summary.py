@@ -1,226 +1,250 @@
 #!/usr/bin/env python
 # coding: utf-8
-import os, base64, json
+#!/usr/bin/env python
+# coding: utf-8
+import os, io, base64, json
 from pathlib import Path
+import numpy as np
 import pandas as pd
-from datetime import datetime
 from utils_banner import print_banner
 
-def _b64_img(path: Path) -> str | None:
-    try:
-        with open(path, "rb") as f:
-            enc = base64.b64encode(f.read()).decode("ascii")
-        ext = path.suffix.lower()
-        mime = "image/png" if ext == ".png" else "image/jpeg"
-        return f"data:{mime};base64,{enc}"
-    except Exception:
-        return None
+# ---------- helpers ----------
+def _img_to_data_uri(path: Path) -> str:
+    with open(path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode("ascii")
+    ext = path.suffix.lower()
+    mime = "image/png" if ext == ".png" else "image/jpeg"
+    return f"data:{mime};base64,{b64}"
 
-def _read_first_csv(glob_paths: list[Path]) -> pd.DataFrame | None:
-    for p in glob_paths:
-        if p.exists():
-            try:
-                return pd.read_csv(p)
-            except Exception:
-                pass
+def _maybe(path: Path) -> bool:
+    return path.exists() and path.is_file()
+
+def _find_first(*candidates: Path) -> Path | None:
+    for c in candidates:
+        if _maybe(c):
+            return c
     return None
 
-def _safe_int(x, default=None):
-    try:
-        return int(x)
-    except Exception:
-        return default
-
-def _html_section(title: str, body_html: str) -> str:
+def _section(title: str, html_inner: str) -> str:
     return f"""
     <section style="margin:18px 0;">
       <h2 style="margin:0 0 8px 0;">{title}</h2>
-      {body_html}
+      {html_inner}
     </section>
     """
 
-def _html_table(df: pd.DataFrame, max_rows: int = 50) -> str:
-    if df is None or df.empty:
-        return "<p><em>No data.</em></p>"
-    df_show = df.head(max_rows).copy()
-    return df_show.to_html(index=False, escape=False)
+def _kv_table(d: dict) -> str:
+    rows = []
+    for k, v in d.items():
+        if isinstance(v, (dict, list)):
+            v_str = "<pre style='margin:0;white-space:pre-wrap'>" + \
+                    (json.dumps(v, indent=2, ensure_ascii=False)) + "</pre>"
+        else:
+            v_str = str(v)
+        rows.append(f"<tr><td><b>{k}</b></td><td>{v_str}</td></tr>")
+    return "<table border='0' cellpadding='6'>" + "".join(rows) + "</table>"
 
+def _link_if_exists(label: str, p: Path) -> str:
+    if _maybe(p):
+        return f"<a href='{p.as_posix()}' target='_blank'>{label}</a>"
+    return f"<span style='opacity:.5'>{label} (no encontrado)</span>"
+
+# ---------- main ----------
 def run(cfg):
-    # -------- Banner --------
     project = str(cfg.get("run", {}).get("project", "default"))
     print_banner(step="summary", project=project)
 
+    # Rutas base (todas relativas al proyecto actual)
     paths = cfg.get("paths", {})
-    # Raíces conocidas del proyecto
-    mse_root   = Path(paths.get("msemetrics", "data/msemetrics")).resolve() / project
-    rec_root   = Path(paths.get("recscores",  "data/recscores")).resolve()  / project
-    mlm_root   = Path(paths.get("mlmodels",   "data/reports/mlmodels")).resolve() / project
-    stats_root = Path(paths.get("reports",    "data/reports")).resolve() / "stats" / project
-    func_root  = Path(paths.get("reports",    "data/reports")).resolve() / "functional" / project
-    model_dir  = Path(paths.get("admodel", "models/heavymodelv1")).resolve()
+    reports_root   = Path(paths.get("reports", "data/reports")).resolve()
+    mlreports_root = reports_root / "mlmodels" / project
+    stats_root     = reports_root / "stats"    / project
+    func_root      = reports_root / "functional" / project
+    out_html_dir   = reports_root / "summary" / project
+    out_html_dir.mkdir(parents=True, exist_ok=True)
+    out_html = out_html_dir / "summary.html"
 
-    out_dir = Path(paths.get("reports", "data/reports")).resolve() / "summary" / project
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_html = out_dir / "ADMeth_summary.html"
+    # ============= 1) Cabecera + parámetros del config.yaml (CAMBIO 5) =============
+    # Selecciono parámetros más útiles, pero dejo un bloque con el resto crudo por si quieres
+    run_cfg   = cfg.get("run", {})
+    mlcfg     = cfg.get("mlmodels", {})
+    functional_cfg = cfg.get("functional", {})
+    stats_cfg = cfg.get("stats", {})  # por si lo usas
 
-    # --------- Cabecera HTML ---------
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    html_parts = [f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>ADMeth — Summary ({project})</title>
-      <style>
-        body {{ font-family: Arial, Helvetica, sans-serif; margin: 20px; }}
-        h1 {{ margin-bottom: 6px; }}
-        h2 {{ border-bottom: 1px solid #ddd; padding-bottom: 4px; }}
-        .kbd {{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-                background:#f5f5f5; border:1px solid #e0e0e0; padding:2px 4px; border-radius:4px; }}
-        .row {{ display:flex; gap:14px; flex-wrap:wrap; }}
-        .card {{ border:1px solid #e6e6e6; border-radius:8px; padding:12px; min-width:280px; }}
-        img {{ max-width:100%; height:auto; border:1px solid #eee; border-radius:6px; }}
-        table {{ border-collapse: collapse; width: 100%; }}
-        th, td {{ border:1px solid #ddd; padding:6px; }}
-        th {{ background:#fafafa; }}
-        .small {{ color:#666; font-size:12px; }}
-      </style>
-    </head>
-    <body>
-      <h1>ADMeth — Project summary</h1>
-      <p class="small">Project: <b>{project}</b> • Generated: {now}</p>
-    """]
+    # Render compacto de parámetros principales
+    params_top = {
+        "project": project,
+        "select.cases": run_cfg.get("select", {}).get("cases", []),
+        "select.controls": run_cfg.get("select", {}).get("controls", []),
+        "mlmodels.n_splits": mlcfg.get("n_splits", 5),
+        "mlmodels.max_features": mlcfg.get("max_features", 500),
+        "mlmodels.n_bootstrap": mlcfg.get("n_bootstrap", 1000),
+        "mlmodels.beta_values": mlcfg.get("beta_values", False),
+        "functional.kegg_focus_term": functional_cfg.get("kegg_focus_term", None),
+        "functional.top_n_cpg": functional_cfg.get("top_n_cpg", None),
+    }
 
-    # --------- Config breve ---------
-    html_parts.append(_html_section("Configuration snapshot",
-        f"<pre class='kbd'>{json.dumps(cfg.get('run', {}), indent=2, ensure_ascii=False)}</pre>"
-    ))
+    # ============= 2) ML models – mejores 10 (CAMBIO 3) =============
+    ml_blocks = []
+    # Intentamos ambos modos: recscores y (si existe) betas
+    for mode in ("recscores", "betas"):
+        mode_dir = mlreports_root / mode
+        comb_csv = mode_dir / "plots" / f"{mode}_combined_performance_long.csv"
+        if not _maybe(comb_csv):
+            # compatibilidad: en tu script guardas el CSV con prefijo del directorio; busca de forma recursiva
+            found = list((mode_dir / "plots").glob("*combined_performance_long.csv"))
+            if found:
+                comb_csv = found[0]
+        if _maybe(comb_csv):
+            df = pd.read_csv(comb_csv)
+            # esperamos columnas: k, model, auc_main, mean_auc_boot, ci95_low, ci95_high, auc_plot
+            # si no está auc_plot, usamos mean_auc_boot o auc_main
+            score_col = "auc_plot" if "auc_plot" in df.columns else ("mean_auc_boot" if "mean_auc_boot" in df.columns else "auc_main")
+            top10 = df.sort_values(score_col, ascending=False).head(10).copy()
+            ml_blocks.append(_section(
+                f"ML models — Top 10 ({mode})",
+                top10.to_html(index=False, float_format=lambda x: f"{x:.4f}" if isinstance(x, (float, np.floating)) else x)
+            ))
 
-    # --------- Model info ---------
-    model_info_txt = model_dir / "model_info.txt"
-    if model_info_txt.exists():
-        try:
-            info = model_info_txt.read_text(encoding="utf-8")
-            body = f"<pre class='kbd' style='white-space:pre-wrap'>{info}</pre>"
-        except Exception:
-            body = "<p><em>No readable model_info.txt</em></p>"
+            # Imágenes estándar si existen
+            line_png = _find_first(*(mode_dir / "plots").glob("*auc_vs_k_with_ci.png"))
+            heat_png = _find_first(*(mode_dir / "plots").glob("*auc_heatmap.png"))
+            box_png  = _find_first(*(mode_dir / "plots").glob("*auc_boxplot_per_model.png"))
+            imgs = []
+            for title, p in (("AUC vs k (95% CI)", line_png),
+                             ("AUC heatmap", heat_png),
+                             ("AUC boxplot per model", box_png)):
+                if p:
+                    imgs.append(f"<div style='margin:8px 0'><div><b>{title}</b></div><img style='max-width:100%' src='{_img_to_data_uri(p)}'></div>")
+            if imgs:
+                ml_blocks.append(_section(f"ML plots ({mode})", "".join(imgs)))
+
+    if not ml_blocks:
+        ml_html = "<p style='opacity:.6'>No se encontraron resultados de ML en este proyecto.</p>"
     else:
-        body = "<p><em>model_info.txt not found.</em></p>"
-    html_parts.append(_html_section("Model info", body))
+        ml_html = "".join(ml_blocks)
 
-    # --------- Evaluate (MSE metrics) ---------
-    # busca summary por dataset en cases/controls
-    mse_rows = []
-    for grp in ("cases", "controls"):
-        grp_dir = mse_root / grp
-        if grp_dir.exists():
-            for csv in grp_dir.rglob("*_mse_summary.csv"):
-                try:
-                    df = pd.read_csv(csv)
-                    df.insert(0, "group", grp)
-                    df.insert(1, "dataset", csv.parent.name)
-                    mse_rows.append(df)
-                except Exception:
-                    pass
-    mse_df = pd.concat(mse_rows, ignore_index=True) if mse_rows else None
-    html_parts.append(_html_section("Evaluation (MSE/MAE/RMSE)",
-        _html_table(mse_df)))
+    # ============= 3) Stats – incluir TODOS los boxplots (CAMBIO 2) =============
+    stats_blocks = []
+    # Top features KS (REC y Beta-values)
+    tf_rec  = stats_root / "top_features_ks_rec.csv"
+    tf_beta = stats_root / "top_features_ks_beta.csv"
+    
+    tf_sections = []
+    
+    if _maybe(tf_rec):
+        df_tf_rec = pd.read_csv(tf_rec)
+        head_rec = df_tf_rec.head(15)
+        tf_sections.append(_section(
+            "Top features (KS, REC)",
+            head_rec.to_html(index=False, float_format=lambda x: f"{x:.4g}" if isinstance(x, (float, np.floating)) else x)
+            + f"<div style='margin-top:6px'>{_link_if_exists('Descargar CSV completo (REC)', tf_rec)}</div>"
+        ))
+    
+    if _maybe(tf_beta):
+        df_tf_beta = pd.read_csv(tf_beta)
+        head_beta = df_tf_beta.head(15)
+        tf_sections.append(_section(
+            "Top features (KS, Beta-values)",
+            head_beta.to_html(index=False, float_format=lambda x: f"{x:.4g}" if isinstance(x, (float, np.floating)) else x)
+            + f"<div style='margin-top:6px'>{_link_if_exists('Descargar CSV completo (Beta-values)', tf_beta)}</div>"
+        ))
+    
+    if tf_sections:
+        stats_blocks.append("".join(tf_sections))
 
-    # --------- REC scores ---------
-    rec_counts = []
-    for grp in ("cases", "controls"):
-        grp_dir = rec_root / grp
-        n = len(list(grp_dir.rglob("*_scores.npy"))) if grp_dir.exists() else 0
-        rec_counts.append((grp, n))
-    html_parts.append(_html_section("REC scores",
-        "<ul>" + "".join([f"<li>{g}: <b>{n}</b> files</li>" for g,n in rec_counts]) + "</ul>"
-    ))
-
-    # --------- ML models (plots + combined perf si existe) ---------
-    mlm_plots = []
-    plots_dir = mlm_root / "plots"
+    plots_dir = stats_root / "plots"
     if plots_dir.exists():
-        for name in ["_auc_vs_k_with_ci.png", "_auc_heatmap.png",
-                     "_auc_boxplot_per_model.png", "_summary_table_colored.png"]:
-            # buscar archivo que termine así
-            matches = list(plots_dir.glob(f"*{name}"))
-            if matches:
-                img64 = _b64_img(matches[0])
-                if img64:
-                    title = name.strip("_").replace("_"," ").replace(".png","")
-                    mlm_plots.append((title, img64))
-    body = ""
-    if mlm_plots:
-        body += "<div class='row'>"
-        for title, img in mlm_plots:
-            body += f"<div class='card'><h3 style='margin:0 0 8px 0;'>{title}</h3><img src='{img}'></div>"
-        body += "</div>"
-    else:
-        body = "<p><em>No ML model plots found.</em></p>"
-    # tabla combinada si existe
-    comb_csvs = list((plots_dir).glob("*_combined_performance_long.csv"))
-    comb_df = pd.read_csv(comb_csvs[0]) if comb_csvs else None
-    body += _html_table(comb_df)
-    html_parts.append(_html_section("ML models (CV results)", body))
+        # global density
+        dens_png = _find_first(*(plots_dir.glob("*global_density_TRAIN_REC_logY.png")))
+        scat_png = _find_first(*(plots_dir.glob("*scatter_medians_TRAIN_REC_symlog.png")))
+        gl_imgs = []
+        for title, p in (("Global density (REC, logY)", dens_png),
+                         ("Per-feature medians (REC, symlog)", scat_png)):
+            if p:
+                gl_imgs.append(f"<div style='margin:8px 0'><div><b>{title}</b></div><img style='max-width:100%' src='{_img_to_data_uri(p)}'></div>")
+        if gl_imgs:
+            stats_blocks.append(_section("Global stats (REC)", "".join(gl_imgs)))
 
-    # --------- Stats (KS top features + plots) ---------
-    tf_rec_csv = stats_root / "top_features_ks_rec.csv"
-    tf_raw_csv = stats_root / "top_features_ks_raw.csv"
-    tf_rec_df = pd.read_csv(tf_rec_csv) if tf_rec_csv.exists() else None
-    tf_raw_df = pd.read_csv(tf_raw_csv) if tf_raw_csv.exists() else None
-
-    stats_plots = []
-    sp_dir = stats_root / "plots"
-    if sp_dir.exists():
-        for name in ["global_density_TRAIN_REC_logY.png",
-                     "scatter_medians_TRAIN_REC_symlog.png"]:
-            p = sp_dir / name
-            if p.exists():
-                img = _b64_img(p)
-                if img:
-                    stats_plots.append((name.replace("_"," ").replace(".png",""), img))
-
-        # primeros 3 boxplots si hay
-        feats_dir = sp_dir / "features"
+        # (CAMBIO 2) incluir **todas** las figuras de features/
+        feats_dir = plots_dir / "features"
         if feats_dir.exists():
-            bxs = sorted(list(feats_dir.glob("feature_*_box*.png")))[:3]
-            for p in bxs:
-                img = _b64_img(p)
-                if img:
-                    stats_plots.append((p.name.replace("_"," ").replace(".png",""), img))
+            feat_pngs = sorted(feats_dir.glob("*.png"))
+            if feat_pngs:
+                # insertamos todas, una debajo de otra
+                imgs = []
+                for p in feat_pngs:
+                    imgs.append(f"<div style='margin:10px 0'><img style='max-width:100%' src='{_img_to_data_uri(p)}'></div>")
+                stats_blocks.append(_section(f"Per-feature boxplots (todos: {len(feat_pngs)})", "".join(imgs)))
 
-    body = "<h3>Top features (REC, KS)</h3>" + _html_table(tf_rec_df, 20)
-    body += "<h3>Top features (Raw betas, KS)</h3>" + _html_table(tf_raw_df, 20)
-    if stats_plots:
-        body += "<div class='row'>"
-        for title, img in stats_plots:
-            body += f"<div class='card'><h3 style='margin:0 0 8px 0;'>{title}</h3><img src='{img}'></div>"
-        body += "</div>"
-    html_parts.append(_html_section("Stats (KS & plots)", body))
+    stats_html = "".join(stats_blocks) if stats_blocks else "<p style='opacity:.6'>No se encontraron resultados de stats.</p>"
 
-    # --------- Functional (tablas + top20) ---------
-    func_tables = []
-    f2 = func_root / "step2_ORA_KEGG_topCpgs_geneUniverse.csv"
-    f3 = func_root / "step3_perm_ORA_KEGG_cpglevel.csv"
-    if f2.exists():
-        func_tables.append(("<b>KEGG ORA (gene universe)</b>", pd.read_csv(f2)))
-    if f3.exists():
-        func_tables.append(("<b>Permutation ORA (CpG-level)</b>", pd.read_csv(f3)))
+    # ============= 4) Functional — KEGG ORA gene universe ordenado por p asc (CAMBIO 4) =============
+    func_blocks = []
+    step2_csv = func_root / "step2_ORA_KEGG_topCpgs_geneUniverse.csv"
+    if _maybe(step2_csv):
+        df2 = pd.read_csv(step2_csv)
+        # Orden por p ascendente (aunque exista FDR, seguimos tu indicación)
+        if "p" in df2.columns:
+            df2 = df2.sort_values("p", ascending=True)
+        top20 = df2.head(20).copy()
+        func_blocks.append(_section("KEGG ORA (gene universe) – top 20 por p-valor",
+            top20.to_html(index=False, float_format=lambda x: f"{x:.4g}" if isinstance(x, (float, np.floating)) else x) +
+            f"<div style='margin-top:6px'>{_link_if_exists('CSV completo', step2_csv)}</div>"
+        ))
+        # Si existe el barplot del paso 2, lo añadimos
+        bar_png = _find_first(*(func_root.glob("step2_KEGG_top20.png")))
+        if bar_png:
+            func_blocks.append(_section("KEGG ORA barplot",
+                f"<img style='max-width:100%' src='{_img_to_data_uri(bar_png)}'>"
+            ))
+    else:
+        func_blocks.append("<p style='opacity:.6'>No se encontraron resultados del análisis funcional.</p>")
 
-    body = ""
-    for title, df in func_tables:
-        body += f"<h3>{title}</h3>" + _html_table(df, 20)
+    func_html = "".join(func_blocks)
 
-    # plot top20 si existe
-    top20_png = func_root / "step2_KEGG_top20.png"
-    if top20_png.exists():
-        img = _b64_img(top20_png)
-        if img:
-            body += f"<div class='card'><h3 style='margin:0 0 8px 0;'>KEGG top-20 (−log10 p)</h3><img src='{img}'></div>"
+    # ============= 5) Montaje HTML final (CAMBIO 1: se elimina recscores counts) =============
+    html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ADMeth — Summary ({project})</title>
+<style>
+ body {{ font-family: Arial, Helvetica, sans-serif; margin: 20px; }}
+ h1 {{ margin: 0 0 8px 0; }}
+ h2 {{ margin: 0 0 6px 0; }}
+ .muted {{ opacity:.6 }}
+ .card {{ border:1px solid #e5e5e5; border-radius:10px; padding:14px; margin:14px 0; }}
+</style>
+</head>
+<body>
+  <h1>ADMeth — Project summary</h1>
+  <div class="card">
+    <div><b>Project:</b> {project}</div>
+    <div><b>Reports root:</b> {reports_root.as_posix()}</div>
+  </div>
 
-    html_parts.append(_html_section("Functional analysis", body if body else "<p><em>No functional outputs found.</em></p>"))
+  <div class="card">
+    <h2 style="margin:0 0 8px 0;">Config parámetros</h2>
+    {_kv_table(params_top)}
+    <details style="margin-top:8px">
+      <summary>Ver config completo</summary>
+      <pre style="white-space:pre-wrap; font-size:12px;">{json.dumps(cfg, indent=2, ensure_ascii=False)}</pre>
+    </details>
+  </div>
 
-    # --------- Cierre ---------
-    html_parts.append("</body></html>")
-    out_html.write_text("\n".join(html_parts), encoding="utf-8")
-    print(f"✅ [summary] Guardado: {out_html}")
+  { _section("Machine Learning (CV results)", ml_html) }
+
+  { _section("Statistics (REC)", stats_html) }
+
+  { _section("Functional analysis", func_html) }
+
+  <hr/>
+  <p class="muted">Generado automáticamente por ADMeth.</p>
+</body>
+</html>
+"""
+    with open(out_html, "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"✅ Summary guardado en: {out_html}")
