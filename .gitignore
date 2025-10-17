@@ -1,17 +1,23 @@
-# Entornos y caches
+
 .venv/
 __pycache__/
 .ipynb_checkpoints/
 *.pyc
 *.pyo
 *.pyd
+*.pyc
+.DS_Store
+.vscode/
+.idea/
+*.log
 
-# Metadatos de empaquetado
 *.egg-info/
 build/
 dist/
 
-# Carpetas pesadas o generadas por la pipeline
-data/
+data/**
+!data/annotations/
+!data/annotations/**
+!**/.gitkeep
 models/
 reports/
