@@ -82,10 +82,10 @@ or run all steps:
     ├── src/                          # source code (cli.py, steps_*.py)
     ├── data/                         # data (ignored in Git)
     |───────── annotations/           # .csv file needed for the preprocessing
-    |───────── rawdatasets/           # PUT HERE THE TWO DATASETS OF BETA VALUES (.txt, .csv or .tsv ) FROM CASES AND CONTROLS, ONE IN EACH FOLDER
+    |───────── rawdatasets/           # COPY HERE THE TWO DATASETS OF BETA VALUES (.txt, .csv or .tsv ) FROM CASES AND CONTROLS, ONE IN EACH FOLDER
     |───────────────────── cases/
     |───────────────────── controls/   
-    |───────── datasets/              # PUT HERE THE UNZIPPED controlsdatasets FOLDER FROM ZENODO (+processed datasets)
+    |───────── datasets/              # COPY HERE THE UNZIPPED controlsdatasets FOLDER FROM ZENODO (+processed datasets)
     |───────── msemetrics/            # mse errors after DL evaluation
     |───────── recscores/             # normalized rec scores after measuring anomalies
     |───────── reports/               # output metrics 
@@ -93,7 +93,7 @@ or run all steps:
     |───────────────── stats/         # figures and tables summarizing the statistical analysis of rec scores and betas
     |───────────────── functional/    # figures and .csv files summarizing the functional analysis
     |───────────────── summary/       # .html file with the summary of all the results
-    ├── models/                       # PUT HERE THE UNZIPPED heavymodelv1 FOLDER FROM ZENODO 
+    ├── models/                       # COPY HERE THE UNZIPPED heavymodelv1 FOLDER FROM ZENODO 
     ├── pyproject.toml                # package metadata
     ├── requirements.txt              # dependencies
     └── README.md          
