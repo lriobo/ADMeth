@@ -15,11 +15,9 @@ import matplotlib.pyplot as plt
 # ========================= helpers =========================
 
 def _load_npy_as_df(npy_path: str) -> pd.DataFrame:
-    """Carga .npy (n_samples x n_features) y devuelve DataFrame con columnas numeradas."""
     arr = np.load(npy_path)
     if arr.ndim != 2:
-        raise ValueError(f"{npy_path} no es 2D (tiene shape {arr.shape})")
-    # Convertimos a float32 y marcamos missing -1 como NaN (en REC)
+        raise ValueError(f"{npy_path} is not a 2D matrix (shape {arr.shape})")
     arr = arr.astype(np.float32, copy=False)
     arr[arr == -1.0] = np.nan
     cols = [str(i) for i in range(arr.shape[1])]
@@ -29,7 +27,6 @@ def _list_npys_recursive(root: Path) -> list[str]:
     return [str(p) for p in root.rglob("*.npy")]
 
 def _norm_stem(p: str) -> str:
-    """Devuelve el 'stem' sin sufijos como _scores o _mse_per_sample_per_position."""
     s = Path(p).stem
     for suf in ("_scores", "_mse_per_sample_per_position"):
         if s.endswith(suf):
@@ -37,7 +34,6 @@ def _norm_stem(p: str) -> str:
     return s
 
 def _bh_fdr(pvals: np.ndarray) -> np.ndarray:
-    """Benjamini–Hochberg FDR (q-values) para array de p-valores."""
     p = np.asarray(pvals, dtype=float)
     n = p.size
     order = np.argsort(p)
@@ -56,7 +52,6 @@ def _savefig(path: Path):
     plt.close()
 
 def _chunked_hist_density(df: pd.DataFrame, bins=512, x_range=(-1, 3), chunk_cols=2000):
-    """Densidad global por histogramas en bloques (robusto a grandes #features)."""
     total = np.zeros(bins, dtype=np.float64)
     edges = np.linspace(x_range[0], x_range[1], bins + 1)
     for s in range(0, df.shape[1], chunk_cols):
@@ -74,7 +69,6 @@ def _chunked_hist_density(df: pd.DataFrame, bins=512, x_range=(-1, 3), chunk_col
 
 def _boxplot_two_groups(ax, data_ctrl, data_case, title, ylabel=None,
                         color_ctrl="#1f77b4", color_case="#d62728"):
-    """Boxplot de dos grupos con cajas RELLENAS (azul=controles, rojo=casos)."""
     bp = ax.boxplot([data_ctrl, data_case],
                     positions=[1, 2], widths=0.7, showfliers=False, patch_artist=True)
     # colorear cajas
@@ -100,20 +94,17 @@ def run(cfg):
     project = str(cfg.get("run", {}).get("project", "default"))
     print_banner(step="stats", project=project)
 
-    # Rutas base
     paths = cfg.get("paths", {})
-    ds_root = Path(paths["datasets_root"]).resolve()                  # RAW (preprocessed) del proyecto
-    rec_root = Path(paths["recscores"]).resolve() / project           # REC scores del proyecto
+    ds_root = Path(paths["datasets_root"]).resolve()                  
+    rec_root = Path(paths["recscores"]).resolve() / project           
     out_root = Path(paths.get("reports", "data/reports")).resolve() / "stats" / project
     out_root.mkdir(parents=True, exist_ok=True)
 
-    # Selección
     run_cfg = cfg.get("run", {})
     select = run_cfg.get("select", {})
     sel_cases = list(select.get("cases", []))
     sel_controls = list(select.get("controls", []))
 
-    # Localizar ficheros REC del proyecto
     rec_cases_dir = rec_root / "cases"
     rec_ctrls_dir = rec_root / "controls"
     rec_cases_npys = _list_npys_recursive(rec_cases_dir) if rec_cases_dir.exists() else []
@@ -125,29 +116,27 @@ def run(cfg):
 
     if not rec_cases_npys or not rec_ctrls_npys:
         raise RuntimeError(
-            f"[stats] No se encontraron REC .npy en {rec_cases_dir} o {rec_ctrls_dir} "
-            f"para los stems seleccionados. Revisa que antes hayas corrido 'recscores'."
+            f"[stats] Not REC .npy files found in {rec_cases_dir} o {rec_ctrls_dir} "
+            f"for the selected stems. Check if you have ran 'recscores'."
         )
 
-    # Tomamos el primer dataset de cada grupo (TRAIN only)
+
     rec_cases_path = rec_cases_npys[0]
     rec_ctrls_path = rec_ctrls_npys[0]
     print(f"[stats] REC cases:    {rec_cases_path}")
     print(f"[stats] REC controls: {rec_ctrls_path}")
 
-    # === Cargar REC como DataFrames y alinear columnas ===
     df_cases_rec = _load_npy_as_df(rec_cases_path)
     df_ctrls_rec = _load_npy_as_df(rec_ctrls_path)
     if list(df_cases_rec.columns) != list(df_ctrls_rec.columns):
         common = [c for c in df_cases_rec.columns if c in df_ctrls_rec.columns]
         if not common:
-            raise RuntimeError("[stats] Cases y Controls no comparten columnas en REC.")
+            raise RuntimeError("[stats] Cases and Controls do not share columns in REC.")
         df_cases_rec = df_cases_rec[common]
         df_ctrls_rec = df_ctrls_rec[common]
 
-    ref_cols = df_cases_rec.columns  # referencia para RAW
+    ref_cols = df_cases_rec.columns  
 
-    # === (Opcional) RAW (Beta-values) del proyecto, alineados a REC ===
     raw_cases_df = None
     raw_ctrls_df = None
     if sel_cases and sel_controls:
@@ -157,14 +146,14 @@ def run(cfg):
             def _load_raw_align(p: Path, ref_cols: pd.Index) -> pd.DataFrame:
                 arr = np.load(p).astype(np.float32, copy=False)
                 if arr.ndim != 2:
-                    raise ValueError(f"{p} no es 2D (shape {arr.shape})")
+                    raise ValueError(f"{p} is not a 2D matrix (shape {arr.shape})")
                 n_features = len(ref_cols)
                 if arr.shape[1] == n_features:
                     pass  # (n_samples, n_features)
                 elif arr.shape[0] == n_features:
                     arr = arr.T  # (n_features, n_samples) -> (n_samples, n_features)
                 else:
-                    raise ValueError(f"{p} no cuadra con n_features={n_features}. Shape: {arr.shape}")
+                    raise ValueError(f"{p} doues not fit n_features={n_features}. Shape: {arr.shape}")
                 return pd.DataFrame(arr, columns=ref_cols)
 
             raw_cases_df = _load_raw_align(raw_cases_path, ref_cols)
@@ -172,7 +161,7 @@ def run(cfg):
             print(f"[stats] RAW cases:    {raw_cases_path}")
             print(f"[stats] RAW controls: {raw_ctrls_path}")
         else:
-            print("[stats] (RAW opcional) No se encontraron .npy RAW para los stems seleccionados.")
+            print("[stats] (RAW opcional) Not .npy RAW found for the selected stems.")
 
     # === TOP FEATURES (KS) — REC ===
     pvals_rec = []
@@ -190,7 +179,7 @@ def run(cfg):
                 p = np.nan
         pvals_rec.append((col, p))
         if (i % 32000 == 0) or (i == n_feats):
-            print(f"[stats][REC] KS por-feature: {i}/{n_feats} columnas")
+            print(f"[stats][REC] KS per-feature: {i}/{n_feats} columns")
 
     tf_rec = pd.DataFrame(pvals_rec, columns=["feature", "p_ks"])
     tf_rec["p_ks"] = tf_rec["p_ks"].astype(float)
@@ -198,7 +187,7 @@ def run(cfg):
     tf_rec = tf_rec.sort_values("p_ks", ascending=True, na_position="last").reset_index(drop=True)
     top_csv_rec = out_root / "top_features_ks_rec.csv"
     tf_rec.to_csv(top_csv_rec, index=False)
-    print(f"[stats] Guardado TOP features (KS, REC): {top_csv_rec}")
+    print(f"[stats] KS test results per feature saved in (KS, REC): {top_csv_rec}")
 
     # === TOP FEATURES (KS) — RAW / Beta-values ===
     if (raw_cases_df is not None) and (raw_ctrls_df is not None):
@@ -217,7 +206,7 @@ def run(cfg):
                     p = np.nan
             pvals_beta.append((col, p))
             if (i % 32000 == 0) or (i == n_feats_b):
-                print(f"[stats][Beta] KS por-feature: {i}/{n_feats_b} columnas")
+                print(f"[stats][Beta] KS per-feature: {i}/{n_feats_b} columns")
 
         tf_beta = pd.DataFrame(pvals_beta, columns=["feature", "p_ks"])
         tf_beta["p_ks"] = tf_beta["p_ks"].astype(float)
@@ -225,7 +214,7 @@ def run(cfg):
         tf_beta = tf_beta.sort_values("p_ks", ascending=True, na_position="last").reset_index(drop=True)
         top_csv_beta = out_root / "top_features_ks_beta.csv"
         tf_beta.to_csv(top_csv_beta, index=False)
-        print(f"[stats] Guardado TOP features (KS, Beta-values): {top_csv_beta}")
+        print(f"[stats] KS test results per feature saved in (KS, Beta-values): {top_csv_beta}")
     else:
         tf_beta = None
 
@@ -235,7 +224,6 @@ def run(cfg):
     plots_dir.mkdir(parents=True, exist_ok=True)
     feats_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1) Densidad global (REC) con Y log
     x_c, d_c = _chunked_hist_density(df_cases_rec, bins=512, x_range=(-1, 3))
     x_n, d_n = _chunked_hist_density(df_ctrls_rec, bins=512, x_range=(-1, 3))
     eps = 1e-12
@@ -246,11 +234,10 @@ def run(cfg):
     plt.plot(x_n, d_n, label="TRAIN Controls (REC)")
     plt.yscale("log"); plt.xlim(-1, 3)
     plt.xlabel("REC value"); plt.ylabel("Density (log)")
-    plt.title("Global density – TRAIN (REC) | Cases vs Controls")
+    plt.title("Global density –  REC | Cases vs Controls")
     plt.legend()
     _savefig(plots_dir / "global_density_TRAIN_REC_logY.png")
 
-    # 2) Dispersión de medianas por feature (REC) con ejes symlog
     med_cases = df_cases_rec.median(axis=0).to_numpy()
     med_ctrls = df_ctrls_rec.median(axis=0).to_numpy()
     max_pts = 100_000
@@ -268,10 +255,9 @@ def run(cfg):
     plt.xscale("symlog", linthresh=1e-3); plt.yscale("symlog", linthresh=1e-3)
     plt.xlabel("Median per feature (Cases, REC)")
     plt.ylabel("Median per feature (Controls, REC)")
-    plt.title("Per-feature medians (TRAIN, REC) — symlog axes")
+    plt.title("Per-feature medians REC — symlog axes")
     _savefig(plots_dir / "scatter_medians_TRAIN_REC_symlog.png")
 
-    # 3) Boxplots por feature top-K (REC) y, si hay RAW, lado a lado Beta-values vs REC
     TOPK_BOX = 10
     top_feats = tf_rec["feature"].astype(str).head(TOPK_BOX).tolist()
 
@@ -311,5 +297,5 @@ def run(cfg):
                                 color_ctrl="#1f77b4", color_case="#d62728")
             _savefig(feats_dir / f"feature_{f}_box_REC.png")
 
-    print(f"✅ [stats] Finalizado. Outputs en: {out_root}")
+    print(f"✅ [stats] Finished. Outputs saved in: {out_root}")
 

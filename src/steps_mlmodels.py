@@ -18,7 +18,6 @@ from joblib import Parallel, delayed
 from utils_banner import print_banner
 
 def _norm_stem(p: Path) -> str:
-    """Nombre base sin sufijos habituales."""
     s = p.stem
     for suf in ("_scores", "_mse_per_sample_per_position"):
         if s.endswith(suf):
@@ -75,7 +74,6 @@ def _bootstrap_mean_ci(values, n_resamples=1000, alpha=0.05, rng=None):
     return float(mean_boot), float(lo), float(hi)
 
 def _run_one_mode(mode_tag, cases_dir, controls_dir, cfg, rng):
-    """Ejecuta todo el flujo para un modo concreto (recscores o betas)."""
     run_cfg = cfg.get("run", {})
     project = str(run_cfg.get("project", "default"))
     select = run_cfg.get("select", {})
@@ -90,31 +88,28 @@ def _run_one_mode(mode_tag, cases_dir, controls_dir, cfg, rng):
     bootstrap_path = out_dir / "AUC_bootstrap.csv"
     top_features_path = out_dir / "FClassif_top20_features.csv"
 
-    # listar ficheros
     if not cases_dir.exists() or not controls_dir.exists():
-        raise FileNotFoundError(f"[mlmodels:{mode_tag}] No existen:\n  {cases_dir}\n  {controls_dir}")
+        raise FileNotFoundError(f"[mlmodels:{mode_tag}] Not found:\n  {cases_dir}\n  {controls_dir}")
 
     cases_files = sorted(cases_dir.rglob("*.npy"))
     controls_files = sorted(controls_dir.rglob("*.npy"))
     if not cases_files:
-        raise RuntimeError(f"[mlmodels:{mode_tag}] No .npy en {cases_dir}")
+        raise RuntimeError(f"[mlmodels:{mode_tag}] No .npy found in {cases_dir}")
     if not controls_files:
-        raise RuntimeError(f"[mlmodels:{mode_tag}] No .npy en {controls_dir}")
+        raise RuntimeError(f"[mlmodels:{mode_tag}] No .npy found in {controls_dir}")
 
-    # Filtrado por selección (si se proporcionó)
     if sel_cases:
         cases_files = [p for p in cases_files if _norm_stem(p) in sel_cases or p.stem in sel_cases]
     if sel_controls:
         controls_files = [p for p in controls_files if _norm_stem(p) in sel_controls or p.stem in sel_controls]
 
     if not cases_files or not controls_files:
-        raise RuntimeError(f"[mlmodels:{mode_tag}] Tras 'run.select', no quedan ficheros.")
+        raise RuntimeError(f"[mlmodels:{mode_tag}] After 'run.select', no files left.")
 
     print(f"[mlmodels:{mode_tag}] Cases files:    {len(cases_files)}")
     print(f"[mlmodels:{mode_tag}] Controls files: {len(controls_files)}")
     print(f"[mlmodels:{mode_tag}] Output dir:     {out_dir}")
 
-    # Hiperparámetros
     n_splits = int(mlcfg.get("n_splits", 5))
     random_state = int(mlcfg.get("random_state", 42))
     apply_feature_filter = bool(mlcfg.get("apply_feature_filter", False))
@@ -124,13 +119,12 @@ def _run_one_mode(mode_tag, cases_dir, controls_dir, cfg, rng):
     n_jobs = int(mlcfg.get("n_jobs", 4))
     k_grid = list(range(1, max_features + 1, 1))
 
-    # Carga
     print(f"[mlmodels:{mode_tag}] Loading matrices…")
     Cases_arr = _load_and_concat(cases_files)
     Controls_arr = _load_and_concat(controls_files)
 
     if Cases_arr.shape[1] != Controls_arr.shape[1]:
-        raise ValueError(f"[mlmodels:{mode_tag}] #features distinto: cases={Cases_arr.shape[1]} vs controls={Controls_arr.shape[1]}")
+        raise ValueError(f"[mlmodels:{mode_tag}] #different number of features: cases={Cases_arr.shape[1]} vs controls={Controls_arr.shape[1]}")
 
     n_features = Cases_arr.shape[1]
     shared_cols = np.array([f"f{i}" for i in range(n_features)], dtype=object)
@@ -143,7 +137,6 @@ def _run_one_mode(mode_tag, cases_dir, controls_dir, cfg, rng):
 
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
 
-    # Modelos
     base_classifiers = {
         "RandomForest": RandomForestClassifier(n_estimators=100, random_state=random_state, n_jobs=1),
         "GradientBoosting": GradientBoostingClassifier(random_state=random_state),
@@ -167,7 +160,6 @@ def _run_one_mode(mode_tag, cases_dir, controls_dir, cfg, rng):
     except Exception:
         pass
 
-    # Limpiar salidas previas
     for p in [micro_path, bootstrap_path, top_features_path]:
         if Path(p).exists():
             Path(p).unlink()
@@ -176,7 +168,6 @@ def _run_one_mode(mode_tag, cases_dir, controls_dir, cfg, rng):
         top_features_path, index=False
     )
 
-    # Precompute folds y ranking
     folds_data = []
     for fold, (tr, te) in enumerate(skf.split(X, y), start=1):
         Xtr, Xte = X[tr], X[te]
@@ -250,7 +241,7 @@ def _run_one_mode(mode_tag, cases_dir, controls_dir, cfg, rng):
     print(f"[mlmodels:{mode_tag}] ✅ Top-20:       {top_features_path}")
 
 def run(cfg):
-    # ---- Banner / entorno ----
+
     project = str(cfg.get("run", {}).get("project", "default"))
     print_banner(step="mlmodels", project=project)
     print("###############   05 - ML MODELS   ###############")
@@ -272,13 +263,11 @@ def run(cfg):
 
     rng = np.random.default_rng(seed=int(mlcfg.get("random_state", 42)))
 
-    # --- Modo REC scores (siempre) ---
     recscores_dir = Path(paths["recscores"]).resolve() / project
     rec_cases_dir = recscores_dir / "cases"
     rec_ctrls_dir = recscores_dir / "controls"
     _run_one_mode("recscores", rec_cases_dir, rec_ctrls_dir, cfg, rng)
 
-    # --- Si beta_values:true → también modo Betas ---
     if use_betas:
         ds_root = Path(paths["datasets_root"]).resolve()
         betas_cases_dir = ds_root / "cases"

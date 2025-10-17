@@ -74,18 +74,17 @@ def run(cfg):
     output_base_dir = Path(cfg["paths"]["msemetrics"]) / project
     output_base_dir.mkdir(parents=True, exist_ok=True)
 
-    # Info útil
     print(f"Model_dir     = {model_dir}")
     print(f"Output_base   = {output_base_dir}")
 
     if not groups["cases"] and not groups["controls"]:
-        raise RuntimeError("[evaluate] No hay datasets seleccionados tras el filtrado. Revisa run.select en config.")
+        raise RuntimeError("[evaluate] No datasets selected after filtering. Check run.select in config.")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     info_path = os.path.join(model_dir, "model_info.txt")
     if not os.path.exists(info_path):
-        raise FileNotFoundError(f"Not found model_info.txt in {model_dir}")
+        raise FileNotFoundError(f"Could not found model_info.txt in {model_dir}")
     
     with open(info_path, "r") as f:
         info_lines = [line.rstrip("\n") for line in f.readlines()]

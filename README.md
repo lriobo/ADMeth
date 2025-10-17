@@ -17,6 +17,10 @@ Install dependencies and ADMeth in editable mode:
 
     pip install -e .
 
+Then run:
+
+    admeth init 
+
 Before starting to use our repository, you will need to: 
 
 1- Download and unzip the DL model (heavymodelv1) from Zenodo () and place it in data/models (you can change the root in config.yaml).
@@ -55,6 +59,7 @@ Our pipeline requires 2 input datasets: cases and controls, which should be plac
 
 Run one of the steps (each one requires previous step):
 
+    admeth init 
     admeth preprocess --config configs/config.yaml
     admeth training --config configs/config.yaml (NOT AVAILABLE YET)
     admeth evaluate --config configs/config.yaml

@@ -5,7 +5,8 @@ DEFAULT_DIRS = [
     "configs",
     "src",
     "data/annotations",
-    "data/rawdatasets",
+    "data/rawdatasets/cases",
+    "data/rawdatasets/controls",
     "data/datasets",
     "data/msemetrics",
     "data/recscores",
@@ -25,4 +26,4 @@ def run(cfg=None):
     print("✅ Folders created:")
     for c in created:
         print("  -", c)
-    print("\n(Check if Anno320K.csv is in data/annotations.)")
+    print("\n(Now download, unzip and upload locally the files from Zenodo: heavymodelv1 and controlsdatasets")

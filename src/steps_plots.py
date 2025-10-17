@@ -20,7 +20,7 @@ HEATMAP_VMIN = 0
 HEATMAP_VMAX = 1
 LINE_YLIM   = (0, 1)
 BOX_YLIM    = (0, 1)
-Y_TICK_STEP_HEATMAP = 30   # k ticks every 30
+Y_TICK_STEP_HEATMAP = 30  
 
 # ---- simple logger for report ----
 class _Logger:
@@ -362,12 +362,8 @@ def run(cfg):
     project = str(cfg.get("run", {}).get("project", "default"))
     print_banner(step="plots", project=project)
 
-    # raíz de resultados ML por proyecto
     ml_root = (Path(cfg.get("mlmodels", {}).get("out_dir", "data/reports/mlmodels")).resolve() / project)
 
-    # modos a considerar:
-    #  - si vienen en config (plots.mlmodels_modes), normalizamos alias a {'recscores','betas'}
-    #  - si no, autodetectamos 'recscores' y/o 'betas'
     cfg_modes = cfg.get("plots", {}).get("mlmodels_modes", None)
 
     def _norm_mode_name(s: str) -> str:
@@ -385,12 +381,11 @@ def run(cfg):
         if (ml_root / "recscores").exists(): modes.append("recscores")
         if (ml_root / "betas").exists():     modes.append("betas")
         if not modes:
-            modes = [""]  # compat: raíz
+            modes = [""]  
 
     print(f"[plots] project={project}")
     print(f"[plots] modes to plot: {modes or ['(root)']}")
 
-    # Generar plots para cada modo
     for mode in modes:
         if mode == "":
             results_dir = str(ml_root)
