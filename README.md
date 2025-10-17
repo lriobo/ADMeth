@@ -1,6 +1,8 @@
 # ADMeth
 
-**ADMeth** is a pipeline for classification of Illumina methylation arrays datasets (450k or EPIC) coming from whole-blood samples based on an AI-driven anomaly detection pipeline. Our workflow automatically extract a feature for each one of the 320,000 selected probes based on its anomaly levels and performs a binary classification task. Graphs, figures and functional and statistical analysis are also included. 
+**ADMeth** is a pipeline for classification of Illumina methylation arrays datasets (450k or EPIC) coming from whole-blood samples based on an AI-driven anomaly detection pipeline. Our workflow automatically extracts a feature (REC score) for each one of the 320,000 selected probes. These REC scores identify anomaly levels in each CpG that can be linked to diseases or phenotype characteristics.
+
+This pipeline also performs a binary classification task using these features and beta-values for comparison. Graphs, figures and functional and statistical analysis are also included. 
 
 ---
 
