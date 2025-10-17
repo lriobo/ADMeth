@@ -17,12 +17,15 @@ Install dependencies and ADMeth in editable mode:
 
     pip install -e .
 
-Before starting to use our repository, you will need to download the DL model from Zenodo () and place it in a folder called models (you can change the root in config.yaml).
+Before starting to use our repository, you will need to: 
+
+1- Download and unzip the DL model (heavymodelv1) from Zenodo () and place it in data/models (you can change the root in config.yaml).
+2- Download and unzip the MSE results for normalization (controlsdatasets) from Zenodo () and place it in data/msemetrics (you can change the root in config.yaml).
 
 ---
 ## 📋 Input data structure
 
-Our pipeline requires 2 input datasets: cases and controls, which should be placed in 2 different folders. These datasets should contain Beta-values matrices, coming from Illumina's Arrays (450k or EPIC) and can be in .tsv, .csv or .txt format. The only requirement is that they should include a "CpG" column with annotated probes. Missing values can be identified as NaNs or as 0.0 values.
+Our pipeline requires 2 input datasets: cases and controls, which should be placed in 2 different folders. These datasets should contain Beta-values matrices, coming from Illumina's Arrays (450k or EPIC) and can be in .tsv, .csv or .txt format. The only requirement is that they should include a "CpG" column with annotated probes. Missing values can be identified as NaNs or as 0.0 values. They should be placed in data/rawdatasets in two separate folders: one for cases and other for controls.
 
 ---
 ## 🔗 Pipeline steps
@@ -30,7 +33,7 @@ Our pipeline requires 2 input datasets: cases and controls, which should be plac
 
 **1- Preprocess**: Loads raw Beta-values datasets (cases and controls), keeps only selected probes and orders them according to its position.
 
-**2- AD Training** (NOT AVAILABLE YET): Trains an AI anomaly detection model, based on AE, on a whole-blood samples dataset. 
+**2- AD Training** (NOT AVAILABLE YET - SKIPPABLE): Trains an AI anomaly detection model, based on AE, on a whole-blood samples dataset. 
 
 **3- AD Evaluate**: Measures anomalies in terms of MSE in selected datasets (cases and controls).
 
@@ -76,7 +79,7 @@ or run all steps:
     |───────── rawdatasets/           # PUT HERE THE TWO DATASETS OF BETA VALUES (.txt, .csv or .tsv ) FROM CASES AND CONTROLS, ONE IN EACH FOLDER
     |───────────────────── cases/
     |───────────────────── controls/   
-    |───────── datasets/              # processed datasets of beta values
+    |───────── datasets/              # PUT HERE THE UNZIPPED controlsdatasets FOLDER FROM ZENODO (+processed datasets)
     |───────── msemetrics/            # mse errors after DL evaluation
     |───────── recscores/             # normalized rec scores after measuring anomalies
     |───────── reports/               # output metrics 
@@ -84,7 +87,7 @@ or run all steps:
     |───────────────── stats/         # figures and tables summarizing the statistical analysis of rec scores and betas
     |───────────────── functional/    # figures and .csv files summarizing the functional analysis
     |───────────────── summary/       # .html file with the summary of all the results
-    ├── models/                       # PUT HERE THE DOWNLOADED MODEL FROM ZENODO 
+    ├── models/                       # PUT HERE THE UNZIPPED heavymodelv1 FOLDER FROM ZENODO 
     ├── pyproject.toml                # package metadata
     ├── requirements.txt              # dependencies
     └── README.md          
