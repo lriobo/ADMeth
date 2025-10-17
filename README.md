@@ -23,9 +23,9 @@ Then run:
 
 Before starting to use our repository, you will need to: 
 
-1- Download and unzip the DL model (heavymodelv1) from Zenodo () and place it in data/models (you can change the root in config.yaml).
+1- Download and unzip the DL model (heavymodelv1) from Zenodo (https://zenodo.org/records/17379350?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6IjA1ZGM3MDA4LTllNGItNDhmYy05Yjg1LTdlNWMxMmI3NDJiMCIsImRhdGEiOnt9LCJyYW5kb20iOiJmOGQ1N2IxNDM0MWI1MTA2ZDQ4YWEyMWM0ZGZhN2VhNSJ9.foeuQ1OC1mJcVSQXO0RlyiDjnBEHj5BKS5544wX0zt0x8eQoew5opbg53OkozMmHIYgnsfl2jVgxwRcb5y6Apw) and place it in data/models (you can change the root in config.yaml).
 
-2- Download and unzip the MSE results for normalization (controlsdatasets) from Zenodo () and place it in data/msemetrics (you can change the root in config.yaml).
+2- Download and unzip the MSE results for normalization (controlsdatasets) from Zenodo (https://zenodo.org/records/17379350?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6IjA1ZGM3MDA4LTllNGItNDhmYy05Yjg1LTdlNWMxMmI3NDJiMCIsImRhdGEiOnt9LCJyYW5kb20iOiJmOGQ1N2IxNDM0MWI1MTA2ZDQ4YWEyMWM0ZGZhN2VhNSJ9.foeuQ1OC1mJcVSQXO0RlyiDjnBEHj5BKS5544wX0zt0x8eQoew5opbg53OkozMmHIYgnsfl2jVgxwRcb5y6Apw) and place it in data/msemetrics (you can change the root in config.yaml).
 
 ---
 ## 📋 Input data structure
