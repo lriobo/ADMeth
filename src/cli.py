@@ -15,7 +15,7 @@ def main():
     parser.add_argument("--config", required=True)
     parser.add_argument(
         "cmd",
-        choices=["init, "preprocess", "evaluate", "recscores", "mlmodels", "plots", "stats", "functional", "summary", "all"],  
+        choices=["init","preprocess", "evaluate", "recscores", "mlmodels", "plots", "stats", "functional", "summary", "all"],  
     )
     args = parser.parse_args()
 
@@ -42,7 +42,7 @@ def main():
     elif args.cmd == "init":
         si.run(cfg)
     elif args.cmd == "all":
-#        sp.run(cfg)
+        sp.run(cfg)
         se.run(cfg)
         sr.run(cfg)
         sm.run(cfg)
