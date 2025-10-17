@@ -32,7 +32,7 @@ Before starting to use our repository, you will need to:
 ---
 ## 📋 Input data structure
 
-Our pipeline requires 2 input datasets: cases and controls, which should be placed in 2 different folders. These datasets should contain Beta-values matrices, coming from Illumina's Arrays (450k or EPIC) and can be in .tsv, .csv or .txt format. The only requirement is that they should include a "CpG" column with annotated probes. Missing values can be identified as NaNs or as 0.0 values. They should be placed in data/rawdatasets in two separate folders: one for cases and other for controls.
+Our pipeline requires 2 input datasets: cases and controls, which should be placed in 2 different folders. These datasets should contain Beta-values matrices (CpGs x Samples), coming from Illumina's Arrays (450k or EPIC) and can be in .tsv, .csv or .txt format. The only requirement is that the index name of the rows should be named "CpG" and include all of the CpG names. Missing values can be identified as NaNs or as 0.0 values. They should be placed in data/rawdatasets in two separate folders: one for cases and other for controls.
 
 ---
 ## 🔗 Pipeline steps

@@ -1,8 +1,8 @@
 run:
-  project: Michaud_v1_10cases
+  project: Michaud_v1_3Cases
   select:
-    cases:    ["Mic10Cas_float16"]
-    controls: ["MicCon_float16"]
+    cases:    ["BetasMic3Cas"]
+    controls: ["BetasMicCon"]
 
 paths:
   annotations: data/annotations/Anno320K.csv

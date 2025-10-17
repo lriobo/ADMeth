@@ -33,12 +33,12 @@ def _filter_complete_align(df: pd.DataFrame, anno_cpg_index: pd.Index) -> pd.Dat
     df = df.copy()
     df["CpG"] = df["CpG"].astype(str).str.strip()
     df = df.set_index("CpG")
-    # quedarnos con CpGs del annotation y reordenarlas
+    
     df = df.loc[df.index.intersection(anno_cpg_index)]
     df = df.reindex(index=anno_cpg_index)
-    # Missings SIEMPRE a 0
+    
     df = df.fillna(0).astype(np.float32, copy=False)
-    # sanity prints
+    
     vals = df.to_numpy()
     print(f"    ↳ Max value: {np.nanmax(vals):.6g}")
     print(f"    ↳ Min value: {np.nanmin(vals):.6g}")
@@ -46,7 +46,7 @@ def _filter_complete_align(df: pd.DataFrame, anno_cpg_index: pd.Index) -> pd.Dat
 
 def _save_npy_matrix(df_aligned: pd.DataFrame, out_path: Path):
 
-    arr = df_aligned.to_numpy(dtype=np.float32, copy=False).T
+    arr = df_aligned.to_numpy(dtype=np.float32, copy=False)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     np.save(out_path, arr)
     print(f"    ↳ Saved: {out_path}  shape={arr.shape} (samples, features)")
@@ -72,8 +72,8 @@ def _process_one(fp: Path, out_dir: Path, anno_cpg_index: pd.Index, dedup: str =
     out_path = out_dir / (fp.stem + ".npy")
     _save_npy_matrix(df_aligned, out_path)
 
-    (out_dir / f"{fp.stem}_cpg_order.txt").write_text("\n".join(anno_cpg_index.tolist()))
-    (out_dir / f"{fp.stem}_samples.txt").write_text("\n".join(df_aligned.columns.astype(str).tolist()))
+    #(out_dir / f"{fp.stem}_cpg_order.txt").write_text("\n".join(anno_cpg_index.tolist()))
+    #(out_dir / f"{fp.stem}_samples.txt").write_text("\n".join(df_aligned.columns.astype(str).tolist()))
 
 def run(cfg):
     project = str(cfg.get("run", {}).get("project", "default"))
@@ -89,7 +89,7 @@ def run(cfg):
     stems_controls = list(select.get("controls", []))
 
     if not stems_cases or not stems_controls:
-        raise RuntimeError("Debes definir run.select.cases y run.select.controls con los stems a usar.")
+        raise RuntimeError("You must define run.select.cases and run.select.controls with the stems to use.")
 
     print(f"[preprocess] Loading annotation: {anno_fp}")
     anno = pd.read_csv(anno_fp)
