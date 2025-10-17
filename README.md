@@ -20,6 +20,7 @@ Install dependencies and ADMeth in editable mode:
 Before starting to use our repository, you will need to: 
 
 1- Download and unzip the DL model (heavymodelv1) from Zenodo () and place it in data/models (you can change the root in config.yaml).
+
 2- Download and unzip the MSE results for normalization (controlsdatasets) from Zenodo () and place it in data/msemetrics (you can change the root in config.yaml).
 
 ---
