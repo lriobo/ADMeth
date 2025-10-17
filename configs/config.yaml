@@ -1,7 +1,7 @@
 run:
-  project: Michaud_v1_3Cases
+  project: Michaud_v1_AllCases_fullpipeline
   select:
-    cases:    ["BetasMic3Cas"]
+    cases:    ["BetasMicCas"]
     controls: ["BetasMicCon"]
 
 paths:
