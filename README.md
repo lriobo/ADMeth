@@ -17,17 +17,19 @@ Install dependencies and ADMeth in editable mode:
 
     pip install -e .
 
+Before starting to use our repository, you will need to download the DL model from Zenodo () and place it in a folder called models (you can change the root in config.yaml).
+
 ---
 ## 📋 Input data structure
 
-Our pipeline requires 2 input datasets: cases and controls, which should be placed in 2 different folders. These datasets should contain Beta-values and can be in .npy, .csv or .pd format. The only requirement is that they should include a "CpG" column with annotated probes.
+Our pipeline requires 2 input datasets: cases and controls, which should be placed in 2 different folders. These datasets should contain Beta-values matrices, coming from Illumina's Arrays (450k or EPIC) and can be in .tsv, .csv or .txt format. The only requirement is that they should include a "CpG" column with annotated probes. Missing values can be identified as NaNs or as 0.0 values.
 
 ---
 ## 🔗 Pipeline steps
 
 **1- Preprocess**: Loads raw Beta-values datasets (cases and controls), keeps only selected probes and orders them according to its position.
 
-**2- AD Training** (SKIPPABLE): Trains an AI anomaly detection model, based on AE, on a whole-blood samples dataset. 
+**2- AD Training** (NOT AVAILABLE YET): Trains an AI anomaly detection model, based on AE, on a whole-blood samples dataset. 
 
 **3- AD Evaluate**: Measures anomalies in terms of MSE in selected datasets (cases and controls).
 
@@ -41,6 +43,7 @@ Our pipeline requires 2 input datasets: cases and controls, which should be plac
 
 **8- Functional analysis**: Performs an ORA enrichment analysis in KEGG over a selected term to check its correlation with selected features.
 
+**9- Summary**: Generates a .html file with a summary of all the results from previous steps.
 
 ---
 ## 🚀 Usage
@@ -48,13 +51,14 @@ Our pipeline requires 2 input datasets: cases and controls, which should be plac
 Run one of the steps (each one requires previous step):
 
     admeth preprocess --config configs/config.yaml
-    admeth training --config configs/config.yaml
+    admeth training --config configs/config.yaml (NOT AVAILABLE YET)
     admeth evaluate --config configs/config.yaml
     admeth recscores --config configs/config.yaml
     admeth mlmodels --config configs/config.yaml
     admeth plots --config configs/config.yaml
     admeth stats --config configs/config.yaml
     admeth functional --config configs/config.yaml
+    admeth summary --config configs/config.yaml 
 
 or run all steps:
 
@@ -64,13 +68,24 @@ or run all steps:
 ## 📁 Project structure
 
     AAADMeth/
-    ├── configs/           # configuration files (.yaml)
-    ├── src/               # source code (cli.py, steps_*.py)
-    ├── data/              # data (ignored in Git)
-    ├── models/            # trained models (ignored in Git)
-    ├── reports/           # output metrics (ignored in Git)
-    ├── pyproject.toml     # package metadata
-    ├── requirements.txt   # dependencies
+    ├── configs/                      # configuration files (.yaml)
+    ├── src/                          # source code (cli.py, steps_*.py)
+    ├── data/                         # data (ignored in Git)
+    |───────── annotations/           # .csv file needed for the preprocessing
+    |───────── rawdatasets/           # PUT HERE THE TWO DATASETS OF BETA VALUES (.txt, .csv or .tsv ) FROM CASES AND CONTROLS, ONE IN EACH FOLDER
+    |───────────────────── cases/
+    |───────────────────── controls/   
+    |───────── datasets/              # processed datasets of beta values
+    |───────── msemetrics/            # mse errors after DL evaluation
+    |───────── recscores/             # normalized rec scores after measuring anomalies
+    |───────── reports/               # output metrics 
+    |───────────────── mlmodels/      # .csv files with the results and plots of the classification task
+    |───────────────── stats/         # figures and tables summarizing the statistical analysis of rec scores and betas
+    |───────────────── functional/    # figures and .csv files summarizing the functional analysis
+    |───────────────── summary/       # .html file with the summary of all the results
+    ├── models/                       # PUT HERE THE DOWNLOADED MODEL FROM ZENODO 
+    ├── pyproject.toml                # package metadata
+    ├── requirements.txt              # dependencies
     └── README.md          
 
 ---

@@ -1,11 +1,12 @@
 run:
-  project: Michaud_v1_3casesTry
+  project: Michaud_v1_10cases
   select:
-    cases:    ["Mic3Cas_float16"]
+    cases:    ["Mic10Cas_float16"]
     controls: ["MicCon_float16"]
 
 paths:
   annotations: data/annotations/Anno320K.csv
+  raw_datasets_root: data/rawdatasets
   datasets_root: data/datasets
   norm_controls_root: data/msemetrics/controlsdatasets
   admodel: models/heavymodelv1
@@ -25,7 +26,7 @@ mlmodels:
   random_state: 42
   apply_feature_filter: false
   feature_filter_threshold: 0.01
-  max_features: 5
+  max_features: 500
   n_bootstrap: 1000
   n_jobs: 8
   
