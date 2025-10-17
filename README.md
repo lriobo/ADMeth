@@ -26,6 +26,7 @@ Our pipeline requires 2 input datasets: cases and controls, which should be plac
 
 ---
 ## 🔗 Pipeline steps
+**0- Initialize**: Creates needed folders and subfolders for the project structure
 
 **1- Preprocess**: Loads raw Beta-values datasets (cases and controls), keeps only selected probes and orders them according to its position.
 

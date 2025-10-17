@@ -1,4 +1,5 @@
 import argparse
+import steps_init as si
 import steps_preprocess as sp
 import steps_evaluate as se
 import steps_recscores as sr
@@ -8,12 +9,13 @@ import steps_stats as ss
 import steps_functional as sf
 import steps_summary as ssum
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
     parser.add_argument(
         "cmd",
-        choices=["preprocess", "evaluate", "recscores", "mlmodels", "plots", "stats", "functional", "summary", "all"],  
+        choices=["init, "preprocess", "evaluate", "recscores", "mlmodels", "plots", "stats", "functional", "summary", "all"],  
     )
     args = parser.parse_args()
 
@@ -37,6 +39,8 @@ def main():
         sf.run(cfg)
     elif args.cmd == "summary":
         ssum.run(cfg)
+    elif args.cmd == "init":
+        si.run(cfg)
     elif args.cmd == "all":
 #        sp.run(cfg)
         se.run(cfg)
